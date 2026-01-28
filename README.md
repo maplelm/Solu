@@ -1,2 +1,25 @@
 # Solu
-An interperated programming language built for speed and flexibility. Let it run regardless of the underlying hardware
+
+## Overview
+- TODO
+
+## Language Features
+- TODO
+
+## Grammar
+- TODO
+
+## Project Structure
+- TODO
+
+## Building
+- TODO
+
+## Running Examples
+- TODO
+
+## Roadmap
+- TODO
+
+## Non-Goals
+- TODO
