@@ -1,20 +1,36 @@
 use super::super::lexer::*;
 use super::node::*;
 use crate::parser::error::ParseError;
+use crate::parser::statements::Stmt;
 
 #[derive(Debug, Clone)]
 pub struct Program {
-    pub items: Vec<Node>,
+    pub nodes: Vec<Node>,
 }
 
 #[derive(Debug, Clone)]
 pub enum Type {
+    Array { elem: Box<Type>, size: usize },
     Named(String),
     Ptr(Box<Type>),
     Ref(Box<Type>),
-    Array { elem: Box<Type>, size: usize },
-    Slice(Box<Type>),
-    Inferred,
+    Primitive(PrimitiveType),
+}
+
+#[derive(Debug, Clone)]
+pub enum PrimitiveType {
+    I8,
+    I16,
+    I32,
+    I64,
+    U8,
+    U16,
+    U32,
+    U64,
+    F32,
+    F64,
+    Char,
+    Bool,
 }
 
 pub struct Parser {
@@ -40,12 +56,12 @@ impl Parser {
     pub fn parse(&mut self) -> Result<Program, ParseError> {
         let mut items = Vec::new();
         while !self.is_at_end() {
-            items.push(self.parse_item()?);
+            items.push(self.parse_node()?);
         }
-        Ok(Program { items })
+        Ok(Program { nodes: items })
     }
 
-    pub fn parse_item(&mut self) -> Result<Node, ParseError> {
+    pub fn parse_node(&mut self) -> Result<Node, ParseError> {
         match self.peek() {
             Token::Struct => self.parse_struct(),
             Token::Enum => self.parse_enum(),
@@ -53,14 +69,71 @@ impl Parser {
             Token::Type => self.parse_type_alias(),
             Token::Ident(_) => self.parse_function(),
             _ => Err(ParseError::new(format!(
-                "expected top-level item, found {:?}",
+                "expected node token, found {:?}",
                 self.peek(),
             ))),
         }
     }
+
+    // ------------------------------------------
+    // Node Parsing
+    // ------------------------------------------
+
+    pub fn prase_function(&mut self) -> Result<Node, ParseError> {
+        // identifier
+        let name = self.expected_identifier()?;
+        // "("
+        self.expected_token(&Token::Lparen)?;
+        // param_list?
+        let params = self.parse_param_list()?;
+        // ")"
+        self.expected_token(&Token::Rparen)?;
+        // (":" type)?
+        let return_type: Option<Type>;
+        if self.match_token(&Token::Colon) {
+            return_type = Some(self.parse_type()?);
+        } else {
+            return_type = None;
+        }
+        // "do"
+        self.expected_token(&Token::Do)?;
+        // TERM
+        self.expected_token(&Token::Term)?;
+        // stmt*
+        let mut body: Vec<Stmt> = Vec::new();
+        while !self.check(&Token::End) {
+            body.push(self.parse_stmt()?);
+        }
+        // "end"
+        self.expected_token(&Token::End)?;
+        // TERM
+        self.expected_token(&Token::Term)?;
+
+        Ok(Node::Function(Function {
+            name,
+            params,
+            ret_type: return_type,
+            body,
+        }))
+    }
+
+    fn parse_param_list(&mut self) -> Result<Vec<Param>, ParseError> {
+        todo!()
+    }
+
     // ------------------------------------------
     // Expected
     // ------------------------------------------
+
+    pub fn expected_int_literal(&mut self) -> Result<u64, ParseError> {
+        match self.peek() {
+            Token::Int(n) => {
+                self.advance();
+                Ok(n)
+            }
+            t => Err(ParseError::new(format!("Expcted int literal, got {:?}", t))),
+        }
+    }
 
     pub fn expected_identifier(&mut self) -> Result<String, ParseError> {
         match self.peek() {
@@ -106,17 +179,9 @@ impl Parser {
         return self.check(token);
     }
 
-    pub fn advance_raw(&mut self) -> Token {
-        let tok = self.peek();
-        if self.pos < self.tokens.len() {
-            self.pos += 1;
-        }
-        return tok;
-    }
-
     pub fn advance(&mut self) -> Token {
         let tok = self.peek();
-        if self.pos < self.tokens.len() {
+        if self.pos < self.tokens.len() && self.tokens[self.pos] != Token::Eof {
             self.pos += 1;
         }
         match &tok {
@@ -131,11 +196,11 @@ impl Parser {
         return tok;
     }
 
-    pub fn bracket_incased(&self) -> bool {
+    pub fn in_braces(&self) -> bool {
         self.paren_depth > 0 || self.brace_depth > 0 || self.bracket_depth > 0
     }
 
-    pub fn is_at_end(&self) -> bool {
-        self.pos >= self.tokens.len()
+    pub fn is_end(&self) -> bool {
+        self.tokens[self.pos] == Token::Eof || self.pos >= self.tokens.len()
     }
 }

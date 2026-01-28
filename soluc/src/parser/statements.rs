@@ -52,6 +52,20 @@ pub type Block = Vec<Stmt>;
 impl crate::parser::core::Parser {
     pub fn parse_stmt(&mut self) -> Result<Stmt, ParseError> {
         match self.peek() {
+            Token::Mut => {}
+            Token::Return => {}
+            Token::Break => {}
+            Token::Continue => {}
+            Token::If => {}
+            Token::While => {}
+            Token::For => {}
+            Token::Switch => {}
+            _ => self.parse_expr(),
+        }
+    }
+    /*
+    pub fn parse_stmt(&mut self) -> Result<Stmt, ParseError> {
+        match self.peek() {
             Token::Mut => self.parse_var_decl(true),
             Token::If => self.parse_if(),
             Token::While => self.parse_while(),
@@ -74,6 +88,7 @@ impl crate::parser::core::Parser {
             _ => Ok(Stmt::Expr(self.parse_expr()?)),
         }
     }
+    */
 
     pub fn parse_block(&mut self) -> Result<Block, ParseError> {
         let mut stmts = Vec::new();

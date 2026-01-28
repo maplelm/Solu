@@ -35,13 +35,13 @@ Runtime behavior
 
 Standard library APIs
 
-## Notation and Conventions
+## Grammar & Syntax
 
-### Grammar Formalism
+### Grammar
 
 EBNF (Extended Backus-Naur Form) is used to specify Dune grammar.
 
-#### Expression Grammer
+#### Expressios
 
 __Level__ is of desending presedence. (1 == highest)
 
@@ -109,7 +109,7 @@ postfix_op ::= "(" (expr ("," expr)*)? ")"
 ```
 
 
-#### Statement Grammar
+#### Statement
 
 The program grammer at a very high level can be summarized by
 
@@ -180,11 +180,11 @@ method_decl ::= identifier "::" identifier "(" param_list? ")" (":" type)? "do" 
 ##### Types
 
 ```ebnf
-type ::= type_base "[" expr "]"
+type ::= type_base ( "[" int_literal "]" )?
 type_base ::= primitive_type
                 | identifier
-                | "*" base_type
-                | "&" base_type
+                | "*" type
+                | "&" type
 primitive_type ::= "i8" | "i16" | "i32" | "i64"
                 | "u8" | "u16" | "u32" | "u64"
                 | "f32" | "f64" | "char" | "bool"
@@ -249,8 +249,8 @@ hex_literal ::= "0x" hex_digit+
 binary_literal ::= "0b" ("0" | "1")+
 hex_digit ::= "0"..."9" | "a"..."f" | "A"..."F"
 comment ::= "--" ? any_char_except_newline ?
+whitespace ::= (" " | "\t" | ( ("(" | "{" | "[" )+ ? any_character ? "\n" ? any_character ? (")" | "}" | "]")+ ) | "\r")+
 ```
-
 ### Lexical vs Syntactic Rules
 
 UpperCamelCase → syntactic rules
@@ -263,15 +263,8 @@ lower_snake_case → lexical tokens
 
 ### Whitespace and Comments
 
-whitespace ::= (" " | "\t" | "\n" | "\r")+
-comment    ::= "--" anything? "\n"
-
-
-State explicitly:
-
-Where whitespace is ignored
-
-Whether newlines are significant
+Newlines are Statement Terminators when not in cased with bracketing ( "()" |
+"[]" | "{}" ). all other whitespace is ignored.
 
 ## Lexical Grammar
 
@@ -310,53 +303,7 @@ escape ::= "\" ("n" | "t" | "\" | "\")
 
 ## Syntactic Grammar
 
-### Program Structure
 
-program ::= declaration*
-
-### Declarations
-
-declaration ::= function_decl
-              | variable_decl
-
-### Statements
-
-statement ::= expression_stmt
-            | return_stmt
-            | if_stmt
-            | block
-
-block ::= "{" statement* "}"
-
-### Expressions
-
-Operator Precedence (Informal)
-Level	Operators	Associativity
-1	* /	left
-2	+ -	left
-3	== !=	left
-4	=	right
-Formal Expression Grammar
-expression ::= assignment
-
-assignment ::= identifier "=" assignment
-             | equality
-
-equality ::= comparison (("==" | "!=") comparison)*
-
-comparison ::= term ((">" | ">=" | "<" | "<=") term)*
-
-term ::= factor (("+" | "-") factor)*
-
-factor ::= unary (("*" | "/") unary)*
-
-unary ::= ("!" | "-") unary
-        | primary
-
-primary ::= int_literal
-          | string_literal
-          | identifier
-          | "(" expression ")"
 
 ## Error Handling Rules
 
@@ -388,16 +335,8 @@ Example:
 
 ## Grammar Stability Guarantees
 
-Grammar is backward-compatible within a minor version
-
-Breaking grammar changes require a major version bump
-
-## Known Limitations and Open Questions
-
-Track unresolved issues to avoid accidental inconsistencies.
-
-- Should function calls allow trailing commas?
-- Are implicit semicolons allowed?
+- Grammar is backward-compatible within a minor version
+- Breaking grammar changes require a major version bump
 
 ## Change Log
 2026-01-26 — Initial grammar draft

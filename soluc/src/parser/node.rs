@@ -81,10 +81,6 @@ impl crate::parser::core::Parser {
         todo!()
     }
 
-    pub fn parse_type_alias(&mut self) -> Result<Node, ParseError> {
-        todo!()
-    }
-
     pub fn parse_function(&mut self) -> Result<Node, ParseError> {
         let name = self.expected_identifier()?;
         self.expected_token(&Token::Lparen)?;
