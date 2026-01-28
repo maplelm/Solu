@@ -43,11 +43,13 @@ EBNF (Extended Backus-Naur Form) is used to specify Dune grammar.
 
 #### Expression Grammer
 
+__Level__ is of desending presedence. (1 == highest)
+
 | Level |                Operands           |    Association    |
 |-------|-----------------------------------|-------------------|
 | 1     | Function calls / indexing         |         -         |
-| 2     | Type casting (as type)            | Right-associative |
-| 3     | Unary (-, !, ~)                   | Right-associative | 
+| 2     | Type casting ([type])             | Left-associative  |
+| 3     | Unary (-, !, ~)                   | Right-associative |
 | 4     | Multiplicative (*, /, %)          | Left-associative  |
 | 5     | Additive (+, -)                   | Left-associative  |
 | 6     | Comparison (==, !=, <, >, <=, >=) | Left-associative  |
@@ -86,7 +88,7 @@ unary_expr ::= ("-" | "!" | "~") unary_expr
                 | type_cast_expr
                 | postfix_expr
 
-type_cast_expr ::= "(" type ")" unary_expr
+type_cast_expr ::= "[" type "]" unary_expr
 
 primary_expr ::= int_literal
                 | float_literal
@@ -94,6 +96,8 @@ primary_expr ::= int_literal
                 | string_literal
                 | hex_literal
                 | binary_literal
+                | "nil"
+                | struct_literal
                 | identifier
                 | "(" expr ")"
 
@@ -109,33 +113,144 @@ postfix_op ::= "(" (expr ("," expr)*)? ")"
 
 The program grammer at a very high level can be summarized by
 
+##### Program
+
 ```ebnf
 program ::= declarations*
-
 declarations ::= struct_decl
                 | enum_decl
                 | const_decl
                 | function_decl
-                | method_decl 
+                | method_decl
+```
+
+##### Structs
+
+```ebnf
+struct_decl ::= "struct" identifier "is" TERM
+                field_decl*
+                "end" TERM
+field_decl ::= identifier ":" type TERM
 ```
 
 ```ebnf
-struct_decl ::= "struct" identifier "is TERM stmt* end TERM
+struct_literal ::= identifier "with" TERM
+                field_init*
+                "end" TERM
+field_init ::= identifier "=" expr TERM
 ```
 
+##### Enums
+
+```ebnf
+enum_decl ::= "enum" identifier "is" TERM
+                (identifier TERM)*
+                "end" TERM
+```
+
+##### Consts
+
+```ebnf
+const_decl ::= "const" identifier ":" type "=" expr TERM
+```
+
+##### Params
+
+```ebnf
+param_list ::= param ("," param)*
+param ::= identifier ":" type
+```
+
+##### Functions
+
+```ebnf
+function_decl ::= identifier "(" param_list? ")" (":" type)? "do" TERM
+                stmt*
+                "end" TERM
+```
+
+##### Methods
+
+```ebnf
+method_decl ::= identifier "::" identifier "(" param_list? ")" (":" type)? "do" TERM
+                stmt*
+                "end" TERM
+param_list ::= param ("," param)*
+param ::= identifier ":" type
+```
+
+##### Types
+
+```ebnf
+type ::= type_base "[" expr "]"
+type_base ::= primitive_type
+                | identifier
+                | "*" base_type
+                | "&" base_type
+primitive_type ::= "i8" | "i16" | "i32" | "i64"
+                | "u8" | "u16" | "u32" | "u64"
+                | "f32" | "f64" | "char" | "bool"
+
+```
+
+##### Statments
+
+```ebnf
 stmt ::= variable_decl
-        | variable_assignment
-        | expr_stmt
-        | return_stmt 
-        | if_stmt
-        | while_stmt
-        | for_stmt
-        | block_stmt
+                | assignment_stmt
+                | expr_stmt
+                | return_stmt
+                | break_stmt
+                | continue_stmt
+                | if_stmt
+                | while_stmt
+                | for_stmt
+                | switch_stmt
+variable_decl ::= "mut"? identifier ":" type ("=" expr)? TERM
+assignment_stmt ::= lvalue assign_op expr TERM
+lvalue ::= "*"* identifier (lvalue_suffix)*
+lvalue_suffix ::= "." identifier
+                | "[" expr "]"
+assign_op ::= "=" | "+=" | "-=" | "*="
+                | "/=" | "%=" | "&=" | "|="
+                | "^=" | "<<=" | ">>="
 
-#### Block Grammer
+expr_stmt ::= expr TERM
+
+return_stmt ::= "return" expr? TERM
+break_stmt ::= "break" TERM
+continue_stmt ::= "continue" TERM
+
+if_stmt ::= "if" expr "then" TERM
+                stmt*
+                ("elif" expr "then" TERM stmt*)*
+                ("else" TERM stmt*)?
+                "end" TERM
+
+while_stmt ::= "while" expr "do" TERM
+                stmt*
+                "end" TERM
+
+for_stmt ::= "for" identifier "in" expr  (".." expr )? "do" TERM 
+                stmt*
+                "end" TERM
+
+switch_stmt ::= "switch" expr "do" TERM
+                ("case" expr ":" TERM stmt*)*
+                ("default" ":" TERM stmt*)?
+                "end" TERM
+```
+
+##### Lexical Tokens
 
 ```ebnf
-block ::= "do" stmt* "end"
+TERM ::= "\n"
+nil ::= "nil"
+bool_literal ::= "true" | "false"
+hex_literal ::= "0x" hex_digit+
+binary_literal ::= "0b" ("0" | "1")+
+hex_digit ::= "0"..."9" | "a"..."f" | "A"..."F"
+comment ::= "--" ? any_char_except_newline ?
 ```
 
 ### Lexical vs Syntactic Rules
@@ -151,7 +266,7 @@ lower_snake_case → lexical tokens
 ### Whitespace and Comments
 
 whitespace ::= (" " | "\t" | "\n" | "\r")+
-comment    ::= "//" ? any_char_except_newline ?
+comment    ::= "--" anything? "\n"
 
 
 State explicitly:
@@ -181,6 +296,8 @@ Reserved keywords cannot be identifiers
 Unicode policy (if any)
 
 ### Keywords
+
+
 
 if, else, while, for, return, let, fn
 
@@ -284,17 +401,7 @@ Track unresolved issues to avoid accidental inconsistencies.
 - Should function calls allow trailing commas?
 - Are implicit semicolons allowed?
 
-## Parser Mapping Notes (Optional but Recommended)
-
-Map grammar rules to parser functions:
-
-expression()  → parse_assignment()
-term()        → parse_term()
-
-
-This prevents the grammar and parser from diverging.
-
 ## Change Log
 2026-01-26 — Initial grammar draft
-
+2026-01-27 - Added statement grammar
 
