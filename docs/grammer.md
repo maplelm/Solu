@@ -175,8 +175,6 @@ function_decl ::= identifier "(" param_list? ")" (":" type)? "do" TERM
 method_decl ::= identifier "::" identifier "(" param_list? ")" (":" type)? "do" TERM
                 stmt*
                 "end" TERM
-param_list ::= param ("," param)*
-param ::= identifier ":" type
 ```
 
 ##### Types
