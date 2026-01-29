@@ -204,8 +204,8 @@ stmt ::= variable_decl
                 | while_stmt
                 | for_stmt
                 | switch_stmt
-variable_decl ::= "mut"? identifier ":" type ("=" expr)? TERM
-assignment_stmt ::= lvalue assign_op expr TERM
+variable_decl ::= "mut"? identifier ":" type ("=" expr)?
+assignment_stmt ::= lvalue assign_op (expr | assign_block)
 lvalue ::= "*"* identifier (lvalue_suffix)*
 lvalue_suffix ::= "." identifier
                 | "[" expr "]"
@@ -213,30 +213,44 @@ assign_op ::= "=" | "+=" | "-=" | "*="
                 | "/=" | "%=" | "&=" | "|="
                 | "^=" | "<<=" | ">>="
 
-expr_stmt ::= expr TERM
+expr_stmt ::= expr
 
-return_stmt ::= "return" expr? TERM
-break_stmt ::= "break" TERM
-continue_stmt ::= "continue" TERM
+return_stmt ::= "return" expr?
+break_stmt ::= "break"
+continue_stmt ::= "continue"
 
-if_stmt ::= "if" expr "then" TERM
-                stmt*
-                ("elif" expr "then" TERM stmt*)*
-                ("else" TERM stmt*)?
-                "end" TERM
+if_stmt ::= "if" expr jmp_block
 
-while_stmt ::= "while" expr "do" TERM
-                stmt*
-                "end" TERM
+while_stmt ::= "while" expr stmt_block 
+for_stmt ::= "for" identifier "in" expr (".." expr)?  stmt_block
+switch_stmt ::= "switch" expr "then" TERM
+                ("case" expr ":" TERM stmt_list)+
+                ("default" ":" TERM stmt_list)?
+                TERM "end"
 
-for_stmt ::= "for" identifier "in" expr  (".." expr )? "do" TERM 
-                stmt*
-                "end" TERM
+stmt_list ::= stmt? (TERM stmt)*
+decl_list ::= variable_decl? (TERM variable_decl)*
+assign_list ::= assignment_stmt (TERM assignment_stmt)*
+```
 
-switch_stmt ::= "switch" expr "do" TERM
-                ("case" expr ":" TERM stmt*)*
-                ("default" ":" TERM stmt*)?
-                "end" TERM
+##### Blocks
+
+then is only allowed to be used with the `if`, `elif`, `switch` keywords
+
+
+```ebnf
+jmp_block ::= "then" TERM? 
+                stmt_list
+                (TERM? "elif" expr "then" TERM? stmt_list )*
+                (TERM? "else" stmt_list)?
+                TERM? "end"
+stmt_block ::= "do" TERM?
+                stmt_list TERM?
+                "end"
+decl_block ::= "is" TERM?
+                decl_list TERM?
+                "end"
+assign_block ::= identifier "with" TERM? assign_list TERM? "end"
 ```
 
 ##### Lexical Tokens

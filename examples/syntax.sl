@@ -40,6 +40,7 @@ end
 
 -- Main Entry Point for function
 main(): i32 do
+	if true then x = 1; end
 	player: Entity = Entity with
 		pos_x = 0b10000
 		pos_y = 0xFF

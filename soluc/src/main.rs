@@ -1,5 +1,5 @@
 pub mod lexer;
-pub mod parser;
+//pub mod parser;
 
 use std::env;
 use std::process::ExitCode;
@@ -35,7 +35,7 @@ fn main() -> ExitCode {
 
     let mut lex = lexer::Lexer::new(&code);
 
-    let tokens = match lex.tokenize() {
+    let tokens = match lex.parse() {
         Ok(t) => t,
         Err(e) => {
             eprintln!(
@@ -48,7 +48,7 @@ fn main() -> ExitCode {
 
     if args.iter().any(|arg| arg == "--print") {
         for token in tokens.iter() {
-            if *token != crate::lexer::Token::Term {
+            if *token != crate::lexer::Token::Delim(crate::lexer::Delimeter::Term) {
                 print!("{}  ", token);
             } else {
                 println!("{}", token);

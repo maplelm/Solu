@@ -32,9 +32,10 @@ impl<'a> Lexer<'a> {
             self.skip_whitespace();
             match self.peek() {
                 '_' | 'a'..='z' | 'A'..='Z' => self.lex_indent(),
-                '0'..='9' => {}
+                '0'..='9' => self.parse_number()?,
                 c if matches!(c, '(' | ')' | '[' | ']' | '{' | '}') => self.lex_groupings(c)?,
                 c if matches!(c, ':' | ',' | ';' | '\n') => self.lex_delim(c)?,
+                c if matches!(c, '"') => self.lex_string_literal(c),
                 c if matches!(
                     c,
                     '.' | '&'
@@ -70,6 +71,47 @@ impl<'a> Lexer<'a> {
                 }
             }
         }
+    }
+
+    fn lex_string_literal(&mut self, c: char) {
+        self.advance();
+        let mut str_literal = String::new();
+        while self.peek() != '"' {
+            match self.peek() {
+                '\\' => {
+                    self.advance();
+                    match self.peek() {
+                        '"' => {
+                            str_literal.push('"');
+                            self.advance();
+                        }
+                        'n' => {
+                            str_literal.push('\n');
+                            self.advance();
+                        }
+                        't' => {
+                            str_literal.push('\t');
+                            self.advance();
+                        }
+                        'r' => {
+                            str_literal.push('\r');
+                            self.advance();
+                        }
+                        '\\' => {
+                            str_literal.push('\\');
+                            self.advance();
+                        }
+                        _ => str_literal.push('\\'),
+                    }
+                }
+                c => {
+                    str_literal.push(c);
+                    self.advance();
+                }
+            }
+        }
+        self.advance();
+        self.tokens.push(Token::Str(str_literal));
     }
 
     fn lex_indent(&mut self) {
@@ -300,6 +342,14 @@ impl<'a> Lexer<'a> {
             ',' => self.tokens.push(Token::Delim(Delimeter::Comma)),
             ';' => self.tokens.push(Token::Delim(Delimeter::Term)),
             '\n' => {
+                println!(
+                    "Checking Newline Creds:\n\tbrace depth: ({},{},{})\n\ttoken count: {}\n\tlast token: {:?}",
+                    self.paren_depth,
+                    self.bracket_depth,
+                    self.brace_depth,
+                    self.tokens.len(),
+                    self.tokens.last().unwrap_or(&Token::Special(Special::Eof))
+                );
                 self.advance();
                 self.skip_whitespace();
                 if !self.in_braces()
@@ -340,7 +390,7 @@ impl<'a> Lexer<'a> {
                 if self.bracket_depth <= 0 {
                     return Err(LexerError::new(self, "Unexpected Rbracket"));
                 }
-                self.bracket_depth = self.paren_depth.wrapping_sub(1);
+                self.bracket_depth = self.bracket_depth.wrapping_sub(1);
                 self.tokens.push(Token::Delim(Delimeter::Rbracket));
             }
             '{' => {
@@ -360,12 +410,12 @@ impl<'a> Lexer<'a> {
         Ok(())
     }
 
-    pub fn float_check(&mut self, t: &mut NumberType) -> Result<bool, LexerError> {
+    fn float_check(&mut self, t: &mut NumLiteralType) -> Result<bool, LexerError> {
         if self.peek() == '.' {
             match t {
-                NumberType::Int => *t = NumberType::Float,
+                NumLiteralType::Int => *t = NumLiteralType::Float,
                 _ => {
-                    return Err(LexerError::new(Span::new(self), "Malformed Float"));
+                    return Err(LexerError::new(self, "Malformed Float"));
                 }
             }
             return Ok(true);
@@ -373,13 +423,13 @@ impl<'a> Lexer<'a> {
         Ok(false)
     }
 
-    pub fn hex_check(&mut self, t: &mut NumberType, ctr: usize) -> Result<bool, LexerError> {
+    fn hex_check(&mut self, t: &mut NumLiteralType, ctr: usize) -> Result<bool, LexerError> {
         if self.peek() == 'x' {
             match t {
-                NumberType::Int if ctr == 1 => *t = NumberType::Hex,
+                NumLiteralType::Int if ctr == 1 => *t = NumLiteralType::Hex,
                 _ => {
                     return Err(LexerError::new(
-                        Span::new(self),
+                        self,
                         format!("Malformed Hex: {} ({})", self.peek(), ctr),
                     ));
                 }
@@ -389,12 +439,12 @@ impl<'a> Lexer<'a> {
         Ok(false)
     }
 
-    pub fn bin_check(&mut self, t: &mut NumberType, ctr: usize) -> Result<bool, LexerError> {
+    fn bin_check(&mut self, t: &mut NumLiteralType, ctr: usize) -> Result<bool, LexerError> {
         if self.peek() == 'b' {
             match t {
-                NumberType::Int if ctr == 1 => *t = NumberType::Binary,
+                NumLiteralType::Int if ctr == 1 => *t = NumLiteralType::Binary,
                 _ => {
-                    return Err(LexerError::new(Span::new(self), "Malformed Binary"));
+                    return Err(LexerError::new(self, "Malformed Binary"));
                 }
             }
             return Ok(true);
@@ -402,61 +452,87 @@ impl<'a> Lexer<'a> {
         Ok(false)
     }
 
-    pub fn number_type_check(
+    fn number_type_check(
         &mut self,
-        t: &mut NumberType,
+        t: &mut NumLiteralType,
         ctr: usize,
     ) -> Result<bool, LexerError> {
         Ok(self.float_check(t)? || self.hex_check(t, ctr)? || self.bin_check(t, ctr)?)
     }
 
-    pub fn parse_number(&mut self) -> Result<Token, LexerError> {
-        let mut n_type = NumberType::Int;
+    fn parse_number(&mut self) -> Result<(), LexerError> {
+        let mut type_state: NumLiteralType = NumLiteralType::Int;
         let mut ctr = 1;
         let mut t = String::from(self.peek());
         self.advance();
         let mut c = self.peek();
         while matches!(
             c,
-            '.' | 'x' | 'a' | 'b' | 'c' | 'd' | 'e' | 'f' | 'A' | 'B' | 'C' | 'D' | 'E' | 'F'
+            '.' | 'x' | 'a'..='f' | 'A'..='F'
         ) || self.is_digit()
         {
-            if !self.number_type_check(&mut n_type, ctr)? {
-                t.push(c);
-            }
+            self.number_type_check(&mut type_state, ctr)?;
+            t.push(c);
             ctr += 1;
             self.advance();
             c = self.peek();
         }
-        match n_type {
-            NumberType::Int => Ok(Token::Int(t.parse::<u64>().unwrap())),
-            NumberType::Float => Ok(Token::Float(t.parse::<f64>().unwrap())),
-            NumberType::Hex => Ok(Token::Int(match u64::from_str_radix(&t[1..], 16) {
-                Ok(n) => n,
-                Err(_) => {
-                    return Err(LexerError::new(
-                        Span::new(self),
-                        format!("Malformed Hex Value: {}", &t[2..]),
-                    ));
-                }
-            })),
-            NumberType::Binary => Ok(Token::Int(match u64::from_str_radix(&t[1..], 2) {
-                Ok(n) => n,
-                Err(_) => {
-                    return Err(LexerError::new(Span::new(self), "Malformed Binary Value"));
-                }
-            })),
-        }
+        match type_state {
+            NumLiteralType::Int => {
+                self.tokens
+                    .push(Token::Num(NumLiteral::Int(match t.parse::<u64>() {
+                        Ok(n) => n,
+                        Err(e) => {
+                            return Err(LexerError::new(
+                                self,
+                                format!("Failed to parse int literal: {}", e),
+                            ));
+                        }
+                    })))
+            }
+            NumLiteralType::Float => {
+                self.tokens
+                    .push(Token::Num(NumLiteral::Float(match t.parse::<f64>() {
+                        Ok(f) => f,
+                        Err(e) => {
+                            return Err(LexerError::new(
+                                self,
+                                format!("Failed to parse float literal: {}", e),
+                            ));
+                        }
+                    })))
+            }
+            NumLiteralType::Hex => self.tokens.push(Token::Num(NumLiteral::Int(
+                match u64::from_str_radix(&t[2..], 16) {
+                    Ok(n) => n,
+                    Err(_) => {
+                        return Err(LexerError::new(
+                            self,
+                            format!("Malformed Hex Value: {}", &t[2..]),
+                        ));
+                    }
+                },
+            ))),
+            NumLiteralType::Binary => self.tokens.push(Token::Num(NumLiteral::Int(
+                match u64::from_str_radix(&t[2..], 2) {
+                    Ok(n) => n,
+                    Err(_) => {
+                        return Err(LexerError::new(self, "Malformed Binary Value"));
+                    }
+                },
+            ))),
+        };
+        Ok(())
     }
 
-    pub fn peek_offset(&self, offset: isize) -> char {
+    fn peek_offset(&self, offset: isize) -> char {
         self.src
             .chars()
             .nth((self.cursor as isize + offset) as usize)
             .unwrap()
     }
 
-    pub fn prev(&self) -> char {
+    fn prev(&self) -> char {
         if self.cursor > self.src.len() || self.cursor == 0 {
             '\0' // end or start of file
         } else {
@@ -464,7 +540,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    pub fn peek(&self) -> char {
+    fn peek(&self) -> char {
         if self.cursor >= self.src.len() {
             '\0' // End of file
         } else {
@@ -472,7 +548,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    pub fn next(&self) -> char {
+    fn next(&self) -> char {
         if (self.cursor + 1) >= self.src.len() {
             '\0'
         } else {
@@ -480,7 +556,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    pub fn advance(&mut self) {
+    fn advance(&mut self) {
         let c = self.peek();
         self.cursor += 1;
         if c == '\n' {
@@ -489,7 +565,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    pub fn skip_whitespace(&mut self) {
+    fn skip_whitespace(&mut self) {
         match self.peek() {
             '\r' | ' ' | '\t' => {
                 self.advance();
@@ -504,43 +580,38 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    pub fn is_digit(&self) -> bool {
+    fn is_digit(&self) -> bool {
         let c = self.peek();
         c >= '0' && c <= '9'
     }
 
-    pub fn is_alpha(&self) -> bool {
+    fn is_alpha(&self) -> bool {
         let c = self.peek();
         (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z')
     }
 
-    pub fn is_alphanumeric(&self) -> bool {
+    fn is_alphanumeric(&self) -> bool {
         self.is_alpha() || self.is_digit()
     }
 
-    /*
-     *   char_literal ::= "'" (unicode_char | escape_sequence) "'"
-     *   escape_sequence ::= "\\" ("'" | "\\" | "n" | "t" | "r" | "u" hex4 | "U" hex8)
-     *   unicode_char ::= any single valid Unicode codepoint except '\' or '''
-     * */
-    pub fn lex_char(&mut self) -> Result<(), LexerError> {
+    fn lex_char(&mut self) -> Result<(), LexerError> {
         match self.peek() {
             '\\' => {
                 self.advance();
                 self.lex_escape_code()?;
                 if !self.match_char('\'') {
-                    return Err(LexerError::new(Span::new(self), "Improper Character found"));
+                    return Err(LexerError::new(self, "Improper Character found"));
                 }
             }
             c if c != '\'' && c != '\n' => {
                 self.tokens.push(Token::Char(c));
                 self.advance();
                 if !self.match_char('\'') {
-                    return Err(LexerError::new(Span::new(self), "Improper Character found"));
+                    return Err(LexerError::new(self, "Improper Character found"));
                 }
             }
             _ => {
-                return Err(LexerError::new(Span::new(self), "Improper Character found"));
+                return Err(LexerError::new(self, "Improper Character found"));
             }
         }
         Ok(())
@@ -596,10 +667,7 @@ impl<'a> Lexer<'a> {
             self.advance();
             return Ok(());
         } else {
-            return Err(LexerError::new(
-                Span::new(self),
-                format!("Unexpected token ({})", c),
-            ));
+            return Err(LexerError::new(self, format!("Unexpected token ({})", c)));
         }
     }
 
@@ -613,7 +681,7 @@ impl<'a> Lexer<'a> {
                 'a'..='f' => c as u32 - 'a' as u32 + 10,
                 'A'..='F' => c as u32 - 'A' as u32 + 10,
                 _ => {
-                    return Err(LexerError::new(Span::new(self), "Invalid unicode value"));
+                    return Err(LexerError::new(self, "Invalid unicode value"));
                 }
             };
             value = (value << 4) | num;
@@ -624,65 +692,10 @@ impl<'a> Lexer<'a> {
             return Ok(());
         } else {
             return Err(LexerError::new(
-                Span::new(self),
+                self,
                 format!("Invalid Char Value: {}", value),
             ));
         }
-    }
-
-    pub fn tokenize(&mut self) -> Result<Vec<Token>, LexerError> {
-        let mut tokens = Vec::new();
-        loop {
-            self.skip_whitespace();
-            match self.peek() {
-                '"' => {
-                    let mut str = String::new();
-                    self.advance();
-                    while self.peek() != '"' {
-                        match self.peek() {
-                            '\\' => {
-                                self.advance();
-                                match self.peek() {
-                                    '"' => {
-                                        str.push('"');
-                                        self.advance();
-                                    }
-                                    'n' => {
-                                        str.push('\n');
-                                        self.advance();
-                                    }
-                                    't' => {
-                                        str.push('\t');
-                                        self.advance();
-                                    }
-                                    'r' => {
-                                        str.push('\r');
-                                        self.advance();
-                                    }
-                                    '\\' => {
-                                        str.push('\\');
-                                        self.advance();
-                                    }
-                                    _ => str.push('\\'),
-                                }
-                            }
-                            c => {
-                                str.push(c);
-                                self.advance();
-                            }
-                        }
-                    }
-                    self.advance();
-                    tokens.push(Token::String(str));
-                }
-                _ if self.is_alpha() || self.peek() == '_' => tokens.push(self.parse_indent()),
-                _ if self.is_digit() => match self.parse_number() {
-                    Ok(t) => tokens.push(t),
-                    Err(e) => return Err(e),
-                },
-            }
-        }
-        Ok(tokens)
     }
 
     fn in_braces(&self) -> bool {
@@ -690,6 +703,7 @@ impl<'a> Lexer<'a> {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 enum NumLiteralType {
     Int,
     Float,
