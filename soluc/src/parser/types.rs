@@ -1,3 +1,4 @@
+use super::core::Parser;
 use crate::lexer;
 use std::fmt;
 
@@ -7,11 +8,11 @@ pub type Ast = Vec<Namespace>;
 #[derive(Debug, Clone)]
 pub struct Namespace {
     pub name: String,
-    pub nodes: Vec<Node>,
+    pub nodes: Vec<Decl>,
 }
 
 #[derive(Debug, Clone)]
-pub enum Node {
+pub enum Decl {
     Function,
     Struct,
     Enum,

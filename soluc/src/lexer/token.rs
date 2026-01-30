@@ -61,6 +61,7 @@ pub enum Keyword {
     Struct,
     Enum,
     Const,
+    Namespace,
     Type,
     // Memory
     Arena,
@@ -161,6 +162,7 @@ impl fmt::Display for Token {
                 Keyword::Struct => write!(f, "STRUCT"),
                 Keyword::Enum => write!(f, "ENUM"),
                 Keyword::Const => write!(f, "CONST"),
+                Keyword::Namespace => write!(f, "NAMESPACE"),
                 Keyword::Type => write!(f, "TYPE"),
                 Keyword::Arena => write!(f, "ARENA"),
                 Keyword::Defer => write!(f, "DEFER"),

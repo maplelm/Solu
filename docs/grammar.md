@@ -37,11 +37,9 @@ Standard library APIs
 
 ## Grammar & Syntax
 
-### Grammar
+### Full Grammar Spec
 
 EBNF (Extended Backus-Naur Form) is used to specify Dune grammar.
-
-#### Expressios
 
 __Level__ is of desending presedence. (1 == highest)
 
@@ -62,34 +60,107 @@ __Level__ is of desending presedence. (1 == highest)
 | 13    | Ternary (? :)                     | Right-associative |
 
 ```ebnf
+(* Starting Point *)
+P ::= decl_list?
+
+(* Declarations *)
+decl_list ::= D (TERM D)*
+D ::= struct_D  
+    | enum_D 
+    | const_D 
+    | func_D
+    | method_D
+    | namespace_D
+struct_D ::= "struct" identifier "is"
+                TERM? member_list_D
+                TERM? "end"
+enum_D ::= "enum" identifier "is"
+                TERM? variant_list
+                TERM? "end"
+const_D ::= "const" identifier ":" type "=" expr
+func_D ::= identifier "(" params? ")" (":" type)? stmt_block
+method_D ::= identifier "::" identifier "(" param_list? ")" (":" type)? stmt_block
+namespace_D ::= "namespace" identifier "is TERM? decl_list TERM? "end"
+
+member_list_D ::= member_D (TERM member_D)*
+member_D ::= identifier ":" type
+variant_list ::= variant (TERM variant)*
+variant ::= identifier
+params ::= param ("," param)*
+param ::= identifier ":" type
+
+(* Statements *)
+stmt ::= var_D
+         | assign_stmt
+         | expr_stmt
+         | ret_stmt
+         | break_stmt
+         | cont_stmt
+         | if_stmt
+         | while_stmt
+         | for_stmt_
+         | switch_stmt
+var_D ::= "mut"? identifier ":" type ("=" expr)?
+assign_stmt ::= lvalue assign_op (expr | assign_block)
+expr_stmt ::= expr
+ret_stmt ::= "return" expr?
+break_stmt ::= "break"
+cont_stmt ::= "continue"
+if_stmt ::= "if" expr jmp_block
+while_stmt ::= "while" expr stmt_block
+for_stmt ::= "for" identifier "in" expr (".." expr)? stmt_block
+switch_stmt ::= "switch" (expr | identifier) "then" TERM? 
+                case_clause+
+                default_clause?
+                TERM? "end"
+
+lvalue ::= "*"* identifier (lvalue_suffix)*
+lvalue_suffix ::= "." identifier
+                | "[" expr "]"
+assign_op ::= "=" | "+=" | "-=" | "*=" | "/=" | "%=" | "&=" | "|=" | "^="
+stmt_list ::= stmt (TERM stmt)*
+assign_list := assign_stmt (TERM assign_stmt)*
+case_clause ::= "case" expr ":"  TERM? stmt_list?
+default_clause ::= "default" ":" TERM? stmt_list?
+
+(* Blocks *)
+jmp_block ::= "then" TERM? stmt_list
+                (TERM? "elif" expr "then" TERM? stmt_list)*
+                (TERM? "else" stmt_list)?
+                TERM? "end"
+stmt_block ::= "do" TERM? stmt_list
+                TERM? "end"
+decl_block ::= "is" TERM? decl_list
+                TERM? "end"
+assign_block ::= identifier "with" TERM? assign_list
+                TERM? "end"
+
+(* Types *)
+type ::= type_base ("[" (identifier | digit+ ) "]")?
+type_base ::= primitive_type
+                | identifier
+                | "*" type
+                | "&" type
+primitive_type ::= "i8" | "i16" | "i32" | "i64"
+                | "u8" | "u16" | "u32" | "u64"
+                | "f32" | "f64" | "char" | "bool"
+
+(* Expressions *)
 expr ::= ternary_expr
-
 ternary_expr  ::= logical_or_expr ( "?" expr ":" ternary_expr)?
-
 logical_or_expr ::= logical_and_expr ("||" logical_and_expr)*
-
 logical_and_expr ::= bitwise_or_expr ("&&" bitwise_or_expr)*
-
 bitwise_or_expr ::= bitwise_xor_expr ("|" bitwise_xor_expr)*
-
 bitwise_xor_expr ::= bitwise_and_expr ("^" bitwise_and_expr)*
-
 bitwise_and_expr ::= bitwise_shift_expr ("&" bitwise_shift_expr)*
-
 bitwise_shift_expr ::= comparison_expr (("<<" | ">>")  comparison_expr)*
-
 comparison_expr ::= additive_expr ( ("==" | "!=" | ">" | "<" | "<=" | ">=") additive_expr)*
-
 additive_expr ::= multiplicative_expr (("+" | "-")  multiplicative_expr)*
-
 multiplicative_expr ::= unary_expr ( ("*" | "/" | "%") unary_expr)*
-
 unary_expr ::= ("-" | "!" | "~") unary_expr
                 | type_cast_expr
                 | postfix_expr
-
 type_cast_expr ::= "[" type "]" unary_expr
-
 primary_expr ::= int_literal
                 | float_literal
                 | bool_literal
@@ -100,182 +171,26 @@ primary_expr ::= int_literal
                 | struct_literal
                 | identifier
                 | "(" expr ")"
-
 postfix_expr ::= primary_expr (postfix_op)*
-
 postfix_op ::= "(" (expr ("," expr)*)? ")"
                 | "." identifier
                 | "[" expr "]"
-```
 
-
-#### Statement
-
-The program grammer at a very high level can be summarized by
-
-##### Program
-
-```ebnf
-program ::= declarations*
-declarations ::= struct_decl
-                | enum_decl
-                | const_decl
-                | function_decl
-                | method_decl
-                | namespace_decl
-declarations_list ::= declarations (TERM declarations)*
-namespace_decl ::= "namespace" identifier namespace_block
-namespace_block ::= "is" TERM? declarations_list TERM "end" TERM
-```
-
-##### Structs
-
-```ebnf
-struct_decl ::= "struct" identifier "is"
-                TERM? field_decl_list
-                TERM? "end"
-field_decl ::= identifier ":" type
-field_decl_list ::= field_decl (TERM field_decl)*
-```
-
-```ebnf
-struct_literal ::= identifier "with"
-                TERM? field_init*
-                "end"
-field_init ::= identifier "=" expr
-field_init_list ::= field_init (TERM field_init)*
-```
-
-##### Enums
-
-```ebnf
-enum_decl ::= "enum" identifier "is"
-                TERM? enum_variant_list
-                TERM? "end"
-enum_variant identifier
-enum_variant_list ::= enum_variant (TERM enum_variant)*
-```
-
-##### Consts
-
-```ebnf
-const_decl ::= "const" identifier ":" type "=" expr
-```
-
-##### Params
-
-```ebnf
-param_list ::= param ("," param)*
-param ::= identifier ":" type
-```
-
-##### Functions
-
-```ebnf
-function_decl ::= identifier "(" param_list? ")" 
-                (":" type)? 
-                stmt_block
-```
-
-##### Methods
-
-```ebnf
-method_decl ::= identifier "::" identifier "(" param_list? ")"
-                (":" type)? "do" TERM
-                stmt_block
-```
-
-##### Types
-
-```ebnf
-type ::= type_base ( "[" int_literal "]" )?
-type_base ::= primitive_type
-                | identifier
-                | "*" type
-                | "&" type
-primitive_type ::= "i8" | "i16" | "i32" | "i64"
-                | "u8" | "u16" | "u32" | "u64"
-                | "f32" | "f64" | "char" | "bool"
-
-```
-
-##### Namespaces
-
-
-##### Statments
-
-```ebnf
-stmt ::= variable_decl
-                | assignment_stmt
-                | expr_stmt
-                | return_stmt
-                | break_stmt
-                | continue_stmt
-                | if_stmt
-                | while_stmt
-                | for_stmt
-                | switch_stmt
-variable_decl ::= "mut"? identifier ":" type ("=" expr)?
-assignment_stmt ::= lvalue assign_op (expr | assign_block)
-lvalue ::= "*"* identifier (lvalue_suffix)*
-lvalue_suffix ::= "." identifier
-                | "[" expr "]"
-assign_op ::= "=" | "+=" | "-=" | "*="
-                | "/=" | "%=" | "&=" | "|="
-                | "^=" | "<<=" | ">>="
-
-expr_stmt ::= expr
-
-return_stmt ::= "return" expr?
-break_stmt ::= "break"
-continue_stmt ::= "continue"
-
-if_stmt ::= "if" expr jmp_block
-
-while_stmt ::= "while" expr stmt_block 
-for_stmt ::= "for" identifier "in" expr (".." expr)?  stmt_block
-switch_stmt ::= "switch" expr "then"
-                TERM? ("case" expr ":" TERM? stmt_list)+
-                TERM? ("default" ":" TERM? stmt_list)?
-                TERM? "end"
-
-stmt_list ::= stmt? (TERM stmt)*
-decl_list ::= variable_decl? (TERM variable_decl)*
-assign_list ::= assignment_stmt (TERM assignment_stmt)*
-```
-
-##### Blocks
-
-then is only allowed to be used with the `if`, `elif`, `switch` keywords
-
-
-```ebnf
-jmp_block ::= "then" TERM? 
-                stmt_list
-                (TERM? "elif" expr "then" TERM? stmt_list )*
-                (TERM? "else" stmt_list)?
-                TERM? "end"
-stmt_block ::= "do"
-                TERM? stmt_list
-                TERM? "end"
-decl_block ::= "is" TERM?
-                decl_list TERM?
-                "end"
-assign_block ::= identifier "with" TERM? assign_list TERM? "end"
-```
-
-##### Lexical Tokens
-
-```ebnf
-TERM ::= "\n"
-nil ::= "nil"
-bool_literal ::= "true" | "false"
-hex_literal ::= "0x" hex_digit+
-binary_literal ::= "0b" ("0" | "1")+
+(* Lexical Terms *)
+TERM ::= "\n" | ";"
+COMMENT ::= "--" ** "\n"
+WHITESPACE ::= "\r" " " "\t" (("(" | "[" | "{")+"\n"(")" | "]" | "}"))+
+NIL ::= "nil"
+BOOL_LIT ::= "true" | "false"
+HEX_LIT ::= "0x" hexdigit+
+BIN_LIT ::= "0b" ("0" | "1")+
 hex_digit ::= "0"..."9" | "a"..."f" | "A"..."F"
-comment ::= "--" ? any_char_except_newline ?
-whitespace ::= (" " | "\t" | ( ("(" | "{" | "[" )+ ? any_character ? "\n" ? any_character ? (")" | "}" | "]")+ ) | "\r")+
+digit ::= ("0"..."9")
+identifier ::= (letter | "_") (letter | digit | "_")*
+letter     ::= "a"…"z" | "A"…"Z"
+digit      ::= "0"…"9"
 ```
+
 ### Lexical vs Syntactic Rules
 
 UpperCamelCase → syntactic rules
@@ -291,8 +206,6 @@ lower_snake_case → lexical tokens
 Newlines are Statement Terminators when not in cased with bracketing ( "()" |
 "[]" | "{}" ). all other whitespace is ignored.
 
-## Lexical Grammar
-
 ### Character Set
 
 UTF-8 / ASCII subset
@@ -300,9 +213,6 @@ UTF-8 / ASCII subset
 Case sensitivity rules
 
 ### Identifiers
-identifier ::= letter (letter | digit | "_")*
-letter     ::= "a"…"z" | "A"…"Z"
-digit      ::= "0"…"9"
 
 
 Constraints:
@@ -313,18 +223,16 @@ Unicode policy (if any)
 
 ### Keywords
 
-
-
-if, else, while, for, return, let, fn
-
-### Literals
-
-Integer Literals
-int_literal ::= digit+
-
-String Literals
-string_literal ::= '"' (escape | ? any_char_except_quote ?) '"'
-escape ::= "\" ("n" | "t" | "\" | "\")
+|        |       |          |        |       |
+|--------|-------|----------|--------|-------|
+| if     | then  | else     | elif   | while |
+| for    | in    | do       | with   | is    |
+| return | break | continue | switch | mut   |
+| struct | enum  | const    | type   | arena |
+| defer  | new   | true     | false  | nil   |
+| i32    | i64   | u8       | u16    | u32   |
+| char   | bool  | end      | i8     | i16   |
+| u64    | f32   | f64      |        |       |
 
 ## Syntactic Grammar
 
