@@ -1,5 +1,5 @@
 pub mod lexer;
-//pub mod parser;
+pub mod parser;
 
 use std::env;
 use std::process::ExitCode;

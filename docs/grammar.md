@@ -122,36 +122,44 @@ declarations ::= struct_decl
                 | const_decl
                 | function_decl
                 | method_decl
+                | namespace_decl
+declarations_list ::= declarations (TERM declarations)*
+namespace_decl ::= "namespace" identifier namespace_block
+namespace_block ::= "is" TERM? declarations_list TERM "end" TERM
 ```
 
 ##### Structs
 
 ```ebnf
-struct_decl ::= "struct" identifier "is" TERM
-                field_decl*
-                "end" TERM
-field_decl ::= identifier ":" type TERM
+struct_decl ::= "struct" identifier "is"
+                TERM? field_decl_list
+                TERM? "end"
+field_decl ::= identifier ":" type
+field_decl_list ::= field_decl (TERM field_decl)*
 ```
 
 ```ebnf
-struct_literal ::= identifier "with" TERM
-                field_init*
-                "end" TERM
-field_init ::= identifier "=" expr TERM
+struct_literal ::= identifier "with"
+                TERM? field_init*
+                "end"
+field_init ::= identifier "=" expr
+field_init_list ::= field_init (TERM field_init)*
 ```
 
 ##### Enums
 
 ```ebnf
-enum_decl ::= "enum" identifier "is" TERM
-                (identifier TERM)*
-                "end" TERM
+enum_decl ::= "enum" identifier "is"
+                TERM? enum_variant_list
+                TERM? "end"
+enum_variant identifier
+enum_variant_list ::= enum_variant (TERM enum_variant)*
 ```
 
 ##### Consts
 
 ```ebnf
-const_decl ::= "const" identifier ":" type "=" expr TERM
+const_decl ::= "const" identifier ":" type "=" expr
 ```
 
 ##### Params
@@ -164,17 +172,17 @@ param ::= identifier ":" type
 ##### Functions
 
 ```ebnf
-function_decl ::= identifier "(" param_list? ")" (":" type)? "do" TERM
-                stmt*
-                "end" TERM
+function_decl ::= identifier "(" param_list? ")" 
+                (":" type)? 
+                stmt_block
 ```
 
 ##### Methods
 
 ```ebnf
-method_decl ::= identifier "::" identifier "(" param_list? ")" (":" type)? "do" TERM
-                stmt*
-                "end" TERM
+method_decl ::= identifier "::" identifier "(" param_list? ")"
+                (":" type)? "do" TERM
+                stmt_block
 ```
 
 ##### Types
@@ -190,6 +198,9 @@ primitive_type ::= "i8" | "i16" | "i32" | "i64"
                 | "f32" | "f64" | "char" | "bool"
 
 ```
+
+##### Namespaces
+
 
 ##### Statments
 
@@ -223,10 +234,10 @@ if_stmt ::= "if" expr jmp_block
 
 while_stmt ::= "while" expr stmt_block 
 for_stmt ::= "for" identifier "in" expr (".." expr)?  stmt_block
-switch_stmt ::= "switch" expr "then" TERM
-                ("case" expr ":" TERM stmt_list)+
-                ("default" ":" TERM stmt_list)?
-                TERM "end"
+switch_stmt ::= "switch" expr "then"
+                TERM? ("case" expr ":" TERM? stmt_list)+
+                TERM? ("default" ":" TERM? stmt_list)?
+                TERM? "end"
 
 stmt_list ::= stmt? (TERM stmt)*
 decl_list ::= variable_decl? (TERM variable_decl)*
@@ -244,9 +255,9 @@ jmp_block ::= "then" TERM?
                 (TERM? "elif" expr "then" TERM? stmt_list )*
                 (TERM? "else" stmt_list)?
                 TERM? "end"
-stmt_block ::= "do" TERM?
-                stmt_list TERM?
-                "end"
+stmt_block ::= "do"
+                TERM? stmt_list
+                TERM? "end"
 decl_block ::= "is" TERM?
                 decl_list TERM?
                 "end"
