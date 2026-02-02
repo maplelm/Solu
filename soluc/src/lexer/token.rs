@@ -95,7 +95,9 @@ pub enum Operator {
     EqEq,  // ==
     NotEq, // !=
     Gt,    // >
+    GtGt,  // >>
     Lt,    // <
+    LtLt,  // <<
     GtEq,  // >=
     LtEq,  // <=
     LAnd,  // Logic And
@@ -189,7 +191,9 @@ impl fmt::Display for Token {
                 Operator::EqEq => write!(f, "=="),
                 Operator::NotEq => write!(f, "!="),
                 Operator::Gt => write!(f, ">"),
+                Operator::GtGt => write!(f, ">>"),
                 Operator::Lt => write!(f, "<"),
+                Operator::LtLt => write!(f, "<<"),
                 Operator::GtEq => write!(f, ">="),
                 Operator::LtEq => write!(f, "<="),
                 Operator::Eq => write!(f, "="),
@@ -236,6 +240,132 @@ impl fmt::Display for Token {
             Token::Special(s) => match s {
                 Special::Invalid(s) => write!(f, "INVALID({})", s),
                 Special::Eof => write!(f, "EOF"),
+            },
+        }
+    }
+}
+
+// Dummy functions for pattern matching
+impl Token {
+    pub const IDENTIFER: Token = Token::Identifier(String::new());
+    pub const INT: Token = Self::Num(NumLiteral::Int(0));
+    pub const FLOAT: Token = Self::Num(NumLiteral::Float(0.0));
+    pub const STRING: Token = Self::Str(String::new());
+}
+
+// Keyword Easy Access
+impl Token {
+    pub const KEY_IF: Token = Self::Keyword(Keyword::If);
+    pub const KEY_THEN: Token = Self::Keyword(Keyword::Then);
+    pub const KEY_ELSE: Token = Self::Keyword(Keyword::Else);
+    pub const KEY_ELIF: Token = Self::Keyword(Keyword::Elif);
+    pub const KEY_WHILE: Token = Self::Keyword(Keyword::While);
+    pub const KEY_FOR: Token = Self::Keyword(Keyword::For);
+    pub const KEY_IN: Token = Self::Keyword(Keyword::In);
+    pub const KEY_DO: Token = Self::Keyword(Keyword::Do);
+    pub const KEY_WITH: Token = Self::Keyword(Keyword::With);
+    pub const KEY_IS: Token = Self::Keyword(Keyword::Is);
+    pub const KEY_END: Token = Self::Keyword(Keyword::End);
+    pub const KEY_RETURN: Token = Self::Keyword(Keyword::Return);
+    pub const KEY_BREAK: Token = Self::Keyword(Keyword::Break);
+    pub const KEY_CONTINUE: Token = Self::Keyword(Keyword::Continue);
+    pub const KEY_SWITCH: Token = Self::Keyword(Keyword::Switch);
+    pub const KEY_MUT: Token = Self::Keyword(Keyword::Mut);
+    pub const KEY_STRUCT: Token = Self::Keyword(Keyword::Struct);
+    pub const KEY_ENUM: Token = Self::Keyword(Keyword::Enum);
+    pub const KEY_CONST: Token = Self::Keyword(Keyword::Const);
+    pub const KEY_NAMESPACE: Token = Self::Keyword(Keyword::Namespace);
+    pub const KEY_TYPE: Token = Self::Keyword(Keyword::Type);
+    pub const KEY_ARENA: Token = Self::Keyword(Keyword::Arena);
+    pub const KEY_DEFER: Token = Self::Keyword(Keyword::Defer);
+    pub const KEY_NEW: Token = Self::Keyword(Keyword::New);
+    pub const KEY_TRUE: Token = Self::Keyword(Keyword::True);
+    pub const KEY_FALSE: Token = Self::Keyword(Keyword::False);
+    pub const KEY_NIL: Token = Self::Keyword(Keyword::Nil);
+    pub const KEY_I8: Token = Self::Keyword(Keyword::TypeI8);
+    pub const KEY_I16: Token = Self::Keyword(Keyword::TypeI16);
+    pub const KEY_I32: Token = Self::Keyword(Keyword::TypeI32);
+    pub const KEY_I64: Token = Self::Keyword(Keyword::TypeI64);
+    pub const KEY_U8: Token = Self::Keyword(Keyword::TypeU8);
+    pub const KEY_U16: Token = Self::Keyword(Keyword::TypeU16);
+    pub const KEY_U32: Token = Self::Keyword(Keyword::TypeU32);
+    pub const KEY_U64: Token = Self::Keyword(Keyword::TypeU64);
+    pub const KEY_F32: Token = Self::Keyword(Keyword::TypeF32);
+    pub const KEY_F64: Token = Self::Keyword(Keyword::TypeF64);
+    pub const KEY_CHAR: Token = Self::Keyword(Keyword::TypeChar);
+    pub const KEY_BOOL: Token = Self::Keyword(Keyword::TypeBool);
+
+    // Operator
+    pub const OP_NOT: Token = Self::Operator(Operator::Not);
+    pub const OP_TERINARY: Token = Self::Operator(Operator::Terinary);
+    pub const OP_EQEQ: Token = Self::Operator(Operator::EqEq);
+    pub const OP_NOTEQ: Token = Self::Operator(Operator::NotEq);
+    pub const OP_GT: Token = Self::Operator(Operator::Gt);
+    pub const OP_GTGT: Token = Self::Operator(Operator::GtGt);
+    pub const OP_LT: Token = Self::Operator(Operator::Lt);
+    pub const OP_LTLT: Token = Self::Operator(Operator::LtLt);
+    pub const OP_GTEQ: Token = Self::Operator(Operator::GtEq);
+    pub const OP_LTEQ: Token = Self::Operator(Operator::LtEq);
+    pub const OP_EQ: Token = Self::Operator(Operator::Eq);
+    pub const OP_LAND: Token = Self::Operator(Operator::LAnd);
+    pub const OP_LOR: Token = Self::Operator(Operator::LOr);
+    pub const OP_PLUSEQ: Token = Self::Operator(Operator::PlusEq);
+    pub const OP_SUBEQ: Token = Self::Operator(Operator::SubEq);
+    pub const OP_STAREQ: Token = Self::Operator(Operator::StarEq);
+    pub const OP_DIVEQ: Token = Self::Operator(Operator::DivEq);
+    pub const OP_MODEQ: Token = Self::Operator(Operator::ModEq);
+    pub const OP_PLUS: Token = Self::Operator(Operator::Plus);
+    pub const OP_STAR: Token = Self::Operator(Operator::Star);
+    pub const OP_DIV: Token = Self::Operator(Operator::Div);
+    pub const OP_MINUS: Token = Self::Operator(Operator::Minus);
+    pub const OP_MOD: Token = Self::Operator(Operator::Mod);
+    pub const OP_AMP: Token = Self::Operator(Operator::Amp);
+    pub const OP_AMPEQ: Token = Self::Operator(Operator::AmpEq);
+    pub const OP_PIPE: Token = Self::Operator(Operator::Pipe);
+    pub const OP_PIPEEQ: Token = Self::Operator(Operator::PipeEq);
+    pub const OP_CARET: Token = Self::Operator(Operator::Caret);
+    pub const OP_CARETEQ: Token = Self::Operator(Operator::CaretEq);
+    pub const OP_TILDE: Token = Self::Operator(Operator::Tilde);
+    pub const OP_TILDEEQ: Token = Self::Operator(Operator::TildeEq);
+    pub const OP_SHIFTL: Token = Self::Operator(Operator::ShiftL);
+    pub const OP_SHIFTR: Token = Self::Operator(Operator::ShiftR);
+    pub const OP_ARROW: Token = Self::Operator(Operator::Arrow);
+    pub const OP_ARROWREV: Token = Self::Operator(Operator::ArrowRev);
+    pub const OP_FATARROW: Token = Self::Operator(Operator::FatArrow);
+    pub const OP_RANGE: Token = Self::Operator(Operator::Range);
+    pub const OP_MEMBERACCESSOR: Token = Self::Operator(Operator::MemberAccessor);
+
+    // Delimeter
+    pub const LPAREN: Token = Self::Delim(Delimeter::Lparen);
+    pub const RPAREN: Token = Self::Delim(Delimeter::Rparen);
+    pub const LBRACKET: Token = Self::Delim(Delimeter::Lbracket);
+    pub const RBRACKET: Token = Self::Delim(Delimeter::Rbracket);
+    pub const LBRACE: Token = Self::Delim(Delimeter::Lbrace);
+    pub const RBRACE: Token = Self::Delim(Delimeter::Rbrace);
+    pub const COLON: Token = Self::Delim(Delimeter::Colon);
+    pub const COMMA: Token = Self::Delim(Delimeter::Comma);
+    pub const SEMICOLON: Token = Self::Delim(Delimeter::SemiColon);
+    pub const TERM: Token = Self::Delim(Delimeter::Term);
+    // Special
+    pub const EOF: Token = Self::Special(Special::Eof);
+    pub fn invalid(s: impl Into<String>) -> Self {
+        Token::Special(Special::Invalid(s.into()))
+    }
+}
+
+impl Token {
+    pub fn to_string(&self) -> Option<String> {
+        match self {
+            Self::Identifier(s) => Some(s.clone()),
+            Self::Char(_) => None,
+            Self::Str(s) => Some(s.clone()),
+            Token::Num(_) => None,
+            Self::Keyword(_) => None,
+            Self::Operator(_) => None,
+            Self::Delim(_) => None,
+            Self::Special(m) => match m {
+                Special::Invalid(s) => Some(s.clone()),
+                _ => None,
             },
         }
     }

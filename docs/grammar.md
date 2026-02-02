@@ -91,7 +91,10 @@ param ::= identifier ":" type
 
 (* Statements *)
 stmt ::= var_D
+         | func_call_stmt
+         | method_call_stmt
          | assign_stmt
+         | init_stmt
          | expr_stmt
          | ret_stmt
          | break_stmt
@@ -101,7 +104,9 @@ stmt ::= var_D
          | for_stmt_
          | switch_stmt
 var_D ::= "mut"? identifier ":" type ("=" expr)?
+init_stmt ::= lvalue "=" ( expr | assign_block)
 assign_stmt ::= lvalue assign_op (expr | assign_block)
+
 expr_stmt ::= expr
 ret_stmt ::= "return" expr?
 break_stmt ::= "break"
@@ -109,7 +114,7 @@ cont_stmt ::= "continue"
 if_stmt ::= "if" expr jmp_block
 while_stmt ::= "while" expr stmt_block
 for_stmt ::= "for" identifier "in" expr (".." expr)? stmt_block
-switch_stmt ::= "switch" (expr | identifier) "then" TERM? 
+switch_stmt ::= "switch" (expr) "then" TERM? 
                 case_clause+
                 default_clause?
                 TERM? "end"
@@ -119,9 +124,12 @@ lvalue_suffix ::= "." identifier
                 | "[" expr "]"
 assign_op ::= "=" | "+=" | "-=" | "*=" | "/=" | "%=" | "&=" | "|=" | "^="
 stmt_list ::= stmt (TERM stmt)*
+init_list := init_stmt (TERM init_stmt)*
 assign_list := assign_stmt (TERM assign_stmt)*
 case_clause ::= "case" expr ":"  TERM? stmt_list?
 default_clause ::= "default" ":" TERM? stmt_list?
+field_init ::= identifier "=" expr
+field_list ::= field_init (TERM field_init)*
 
 (* Blocks *)
 jmp_block ::= "then" TERM? stmt_list
@@ -132,7 +140,7 @@ stmt_block ::= "do" TERM? stmt_list
                 TERM? "end"
 decl_block ::= "is" TERM? decl_list
                 TERM? "end"
-assign_block ::= identifier "with" TERM? assign_list
+assign_block ::= identifier "with" TERM? field_list
                 TERM? "end"
 
 (* Types *)
@@ -157,7 +165,7 @@ bitwise_shift_expr ::= comparison_expr (("<<" | ">>")  comparison_expr)*
 comparison_expr ::= additive_expr ( ("==" | "!=" | ">" | "<" | "<=" | ">=") additive_expr)*
 additive_expr ::= multiplicative_expr (("+" | "-")  multiplicative_expr)*
 multiplicative_expr ::= unary_expr ( ("*" | "/" | "%") unary_expr)*
-unary_expr ::= ("-" | "!" | "~") unary_expr
+unary_expr ::= ("*" | "-" | "!" | "~") unary_expr
                 | type_cast_expr
                 | postfix_expr
 type_cast_expr ::= "[" type "]" unary_expr
@@ -175,6 +183,8 @@ postfix_expr ::= primary_expr (postfix_op)*
 postfix_op ::= "(" (expr ("," expr)*)? ")"
                 | "." identifier
                 | "[" expr "]"
+
+struct_literal ::= assign_block
 
 (* Lexical Terms *)
 TERM ::= "\n" | ";"
