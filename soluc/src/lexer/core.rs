@@ -3,6 +3,7 @@ use super::*;
 
 #[derive(Debug, Clone)]
 pub struct Lexer<'a> {
+    pub span_table: Vec<Span>,
     pub tokens: Vec<Token>,
     pub cursor: usize,
     pub line: usize,
@@ -17,6 +18,7 @@ impl<'a> Lexer<'a> {
     pub fn new(src: &'a str) -> Self {
         Self {
             tokens: vec![],
+            span_table: vec![],
             src,
             cursor: 0,
             line_start: 0,
@@ -27,7 +29,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    pub fn parse(&mut self) -> Result<Vec<Token>, LexerError> {
+    pub fn parse(&mut self) -> Result<(Vec<Token>, Vec<Span>), LexerError> {
         loop {
             self.skip_whitespace();
             match self.peek() {
@@ -60,8 +62,8 @@ impl<'a> Lexer<'a> {
                     self.lex_char()?;
                 }
                 '\0' => {
-                    self.tokens.push(Token::Special(Special::Eof));
-                    return Ok(self.tokens.clone());
+                    self.push_token(Token::Eof);
+                    return Ok((self.tokens.clone(), self.span_table.clone()));
                 }
                 c => {
                     // self.tokens
@@ -111,7 +113,7 @@ impl<'a> Lexer<'a> {
             }
         }
         self.advance();
-        self.tokens.push(Token::Str(str_literal));
+        self.push_token(Token::Str(str_literal));
     }
 
     fn lex_indent(&mut self) {
@@ -122,213 +124,216 @@ impl<'a> Lexer<'a> {
             self.advance();
         }
         match indent.as_str() {
-            "if" => self.tokens.push(Token::Keyword(Keyword::If)),
-            "then" => self.tokens.push(Token::Keyword(Keyword::Then)),
-            "else" => self.tokens.push(Token::Keyword(Keyword::Else)),
-            "elif" => self.tokens.push(Token::Keyword(Keyword::Elif)),
-            "while" => self.tokens.push(Token::Keyword(Keyword::While)),
-            "for" => self.tokens.push(Token::Keyword(Keyword::For)),
-            "in" => self.tokens.push(Token::Keyword(Keyword::In)),
-            "do" => self.tokens.push(Token::Keyword(Keyword::Do)),
-            "with" => self.tokens.push(Token::Keyword(Keyword::With)),
-            "is" => self.tokens.push(Token::Keyword(Keyword::Is)),
-            "end" => self.tokens.push(Token::Keyword(Keyword::End)),
-            "return" => self.tokens.push(Token::Keyword(Keyword::Return)),
-            "break" => self.tokens.push(Token::Keyword(Keyword::Break)),
-            "continue" => self.tokens.push(Token::Keyword(Keyword::Continue)),
-            "switch" => self.tokens.push(Token::Keyword(Keyword::Switch)),
-            "mut" => self.tokens.push(Token::Keyword(Keyword::Mut)),
-            "struct" => self.tokens.push(Token::Keyword(Keyword::Struct)),
-            "enum" => self.tokens.push(Token::Keyword(Keyword::Enum)),
-            "const" => self.tokens.push(Token::Keyword(Keyword::Const)),
-            "type" => self.tokens.push(Token::Keyword(Keyword::Type)),
-            "arena" => self.tokens.push(Token::Keyword(Keyword::Arena)),
-            "defer" => self.tokens.push(Token::Keyword(Keyword::Defer)),
-            "new" => self.tokens.push(Token::Keyword(Keyword::New)),
+            "if" => self.push_token(Token::If),
+            "then" => self.push_token(Token::Then),
+            "else" => self.push_token(Token::Else),
+            "elif" => self.push_token(Token::Elif),
+            "while" => self.push_token(Token::While),
+            "for" => self.push_token(Token::For),
+            "in" => self.push_token(Token::In),
+            "do" => self.push_token(Token::Do),
+            "with" => self.push_token(Token::With),
+            "is" => self.push_token(Token::Is),
+            "end" => self.push_token(Token::End),
+            "return" => self.push_token(Token::Return),
+            "break" => self.push_token(Token::Break),
+            "continue" => self.push_token(Token::Continue),
+            "switch" => self.push_token(Token::Switch),
+            "mut" => self.push_token(Token::Mut),
+            "struct" => self.push_token(Token::Struct),
+            "enum" => self.push_token(Token::Enum),
+            "const" => self.push_token(Token::Const),
+            "type" => self.push_token(Token::Type),
+            "arena" => self.push_token(Token::Arena),
+            "defer" => self.push_token(Token::Defer),
+            "new" => self.push_token(Token::New),
 
-            "true" => self.tokens.push(Token::Keyword(Keyword::True)),
-            "false" => self.tokens.push(Token::Keyword(Keyword::False)),
-            "nil" => self.tokens.push(Token::Keyword(Keyword::Nil)),
-            "i8" => self.tokens.push(Token::Keyword(Keyword::TypeI8)),
-            "i16" => self.tokens.push(Token::Keyword(Keyword::TypeI16)),
-            "i32" => self.tokens.push(Token::Keyword(Keyword::TypeI32)),
-            "i64" => self.tokens.push(Token::Keyword(Keyword::TypeI64)),
-            "u8" => self.tokens.push(Token::Keyword(Keyword::TypeU8)),
-            "u16" => self.tokens.push(Token::Keyword(Keyword::TypeU16)),
-            "u32" => self.tokens.push(Token::Keyword(Keyword::TypeU32)),
-            "u64" => self.tokens.push(Token::Keyword(Keyword::TypeU64)),
-            "f32" => self.tokens.push(Token::Keyword(Keyword::TypeF32)),
-            "f64" => self.tokens.push(Token::Keyword(Keyword::TypeF64)),
-            "char" => self.tokens.push(Token::Keyword(Keyword::TypeChar)),
-            "bool" => self.tokens.push(Token::Keyword(Keyword::TypeBool)),
+            "true" => self.push_token(Token::True),
+            "false" => self.push_token(Token::False),
+            "nil" => self.push_token(Token::Nil),
+            "i8" => self.push_token(Token::TypeI8),
+            "i16" => self.push_token(Token::TypeI16),
+            "i32" => self.push_token(Token::TypeI32),
+            "i64" => self.push_token(Token::TypeI64),
+            "u8" => self.push_token(Token::TypeU8),
+            "u16" => self.push_token(Token::TypeU16),
+            "u32" => self.push_token(Token::TypeU32),
+            "u64" => self.push_token(Token::TypeU64),
+            "f32" => self.push_token(Token::TypeF32),
+            "f64" => self.push_token(Token::TypeF64),
+            "char" => self.push_token(Token::TypeChar),
+            "bool" => self.push_token(Token::TypeBool),
+            "this" => self.push_token(Token::This),
+            "case" => self.push_token(Token::Case),
+            "default" => self.push_token(Token::Default),
 
-            _ => self.tokens.push(Token::Identifier(indent)),
+            _ => self.push_token(Token::Identifier(indent)),
         }
     }
     fn lex_op(&mut self, c: char) -> Result<(), LexerError> {
         match c {
             '?' => {
-                self.tokens.push(Token::Operator(Operator::Terinary));
+                self.push_token(Token::Terinary);
                 self.advance();
             }
             '+' => {
                 self.advance();
                 match self.peek() {
                     '=' => {
-                        self.tokens.push(Token::Operator(Operator::PlusEq));
+                        self.push_token(Token::PlusEq);
                         self.advance();
                     }
-                    _ => self.tokens.push(Token::Operator(Operator::Plus)),
+                    _ => self.push_token(Token::Plus),
                 }
             }
             '-' => {
                 self.advance();
                 match self.peek() {
                     '=' => {
-                        self.tokens.push(Token::Operator(Operator::SubEq));
+                        self.push_token(Token::SubEq);
                         self.advance();
                     }
                     '>' => {
-                        self.tokens.push(Token::Operator(Operator::Arrow));
+                        self.push_token(Token::Arrow);
                         self.advance();
                     }
-                    _ => self.tokens.push(Token::Operator(Operator::Minus)),
+                    _ => self.push_token(Token::Minus),
                 }
             }
             '*' => {
                 self.advance();
                 match self.peek() {
                     '=' => {
-                        self.tokens.push(Token::Operator(Operator::StarEq));
+                        self.push_token(Token::StarEq);
                         self.advance();
                     }
-                    _ => self.tokens.push(Token::Operator(Operator::Star)),
+                    _ => self.push_token(Token::Star),
                 }
             }
             '/' => {
                 self.advance();
                 match self.peek() {
                     '=' => {
-                        self.tokens.push(Token::Operator(Operator::DivEq));
+                        self.push_token(Token::DivEq);
                         self.advance();
                     }
-                    _ => self.tokens.push(Token::Operator(Operator::Div)),
+                    _ => self.push_token(Token::Div),
                 }
             }
             '=' => {
                 self.advance();
                 match self.peek() {
                     '=' => {
-                        self.tokens.push(Token::Operator(Operator::EqEq));
+                        self.push_token(Token::EqEq);
                         self.advance();
                     }
                     '>' => {
-                        self.tokens.push(Token::Operator(Operator::FatArrow));
+                        self.push_token(Token::FatArrow);
                         self.advance();
                     }
-                    _ => self.tokens.push(Token::Operator(Operator::Eq)),
+                    _ => self.push_token(Token::Eq),
                 }
             }
             '>' => {
                 self.advance();
                 match self.peek() {
                     '=' => {
-                        self.tokens.push(Token::Operator(Operator::LtEq));
+                        self.push_token(Token::LtEq);
                         self.advance();
                     }
                     '>' => {
-                        self.tokens.push(Token::Operator(Operator::ShiftR));
+                        self.push_token(Token::ShiftR);
                         self.advance();
                     }
-                    _ => self.tokens.push(Token::Operator(Operator::Gt)),
+                    _ => self.push_token(Token::Gt),
                 }
             }
             '<' => {
                 self.advance();
                 match self.peek() {
                     '=' => {
-                        self.tokens.push(Token::Operator(Operator::LtEq));
+                        self.push_token(Token::LtEq);
                         self.advance();
                     }
                     '<' => {
-                        self.tokens.push(Token::Operator(Operator::ShiftL));
+                        self.push_token(Token::ShiftL);
                         self.advance();
                     }
                     '-' => {
-                        self.tokens.push(Token::Operator(Operator::ArrowRev));
+                        self.push_token(Token::ArrowRev);
                         self.advance();
                     }
-                    _ => self.tokens.push(Token::Operator(Operator::Lt)),
+                    _ => self.push_token(Token::Lt),
                 }
             }
             '.' => {
                 self.advance();
                 match self.peek() {
                     '.' => {
-                        self.tokens.push(Token::Operator(Operator::Range));
+                        self.push_token(Token::Range);
                         self.advance();
                     }
-                    _ => self.tokens.push(Token::Operator(Operator::MemberAccessor)),
+                    _ => self.push_token(Token::MemberAccessor),
                 }
             }
             '|' => {
                 self.advance();
                 match self.peek() {
                     '=' => {
-                        self.tokens.push(Token::Operator(Operator::PipeEq));
+                        self.push_token(Token::PipeEq);
                         self.advance();
                     }
-                    _ => self.tokens.push(Token::Operator(Operator::Pipe)),
+                    _ => self.push_token(Token::Pipe),
                 }
             }
             '^' => {
                 self.advance();
                 match self.peek() {
                     '=' => {
-                        self.tokens.push(Token::Operator(Operator::CaretEq));
+                        self.push_token(Token::CaretEq);
                         self.advance();
                     }
-                    _ => self.tokens.push(Token::Operator(Operator::Caret)),
+                    _ => self.push_token(Token::Caret),
                 }
             }
             '~' => {
                 self.advance();
                 match self.peek() {
                     '=' => {
-                        self.tokens.push(Token::Operator(Operator::TildeEq));
+                        self.push_token(Token::TildeEq);
                         self.advance();
                     }
-                    _ => self.tokens.push(Token::Operator(Operator::Tilde)),
+                    _ => self.push_token(Token::Tilde),
                 }
             }
             '!' => {
                 self.advance();
                 match self.peek() {
                     '=' => {
-                        self.tokens.push(Token::Operator(Operator::NotEq));
+                        self.push_token(Token::NotEq);
                         self.advance();
                     }
-                    _ => self.tokens.push(Token::Operator(Operator::Not)),
+                    _ => self.push_token(Token::Not),
                 }
             }
             '%' => {
                 self.advance();
                 match self.peek() {
                     '=' => {
-                        self.tokens.push(Token::Operator(Operator::ModEq));
+                        self.push_token(Token::ModEq);
                         self.advance();
                     }
-                    _ => self.tokens.push(Token::Operator(Operator::Mod)),
+                    _ => self.push_token(Token::Mod),
                 }
             }
             '&' => {
                 self.advance();
                 match self.peek() {
                     '&' => {
-                        self.tokens.push(Token::Operator(Operator::LAnd));
+                        self.push_token(Token::LAnd);
                         self.advance();
                     }
-                    _ => self.tokens.push(Token::Operator(Operator::Amp)),
+                    _ => self.push_token(Token::Amp),
                 }
             }
             _ => unreachable!(),
@@ -338,27 +343,18 @@ impl<'a> Lexer<'a> {
 
     fn lex_delim(&mut self, c: char) -> Result<(), LexerError> {
         match c {
-            ':' => self.tokens.push(Token::Delim(Delimeter::Colon)),
-            ',' => self.tokens.push(Token::Delim(Delimeter::Comma)),
-            ';' => self.tokens.push(Token::Delim(Delimeter::Term)),
+            ':' => self.push_token(Token::Colon),
+            ',' => self.push_token(Token::Comma),
+            ';' => self.push_token(Token::Term),
             '\n' => {
-                println!(
-                    "Checking Newline Creds:\n\tbrace depth: ({},{},{})\n\ttoken count: {}\n\tlast token: {:?}",
-                    self.paren_depth,
-                    self.bracket_depth,
-                    self.brace_depth,
-                    self.tokens.len(),
-                    self.tokens.last().unwrap_or(&Token::Special(Special::Eof))
-                );
                 self.advance();
                 self.skip_whitespace();
                 if !self.in_braces()
                     && self.tokens.len() > 0
-                    && self.tokens.last().unwrap_or(&Token::Special(Special::Eof))
-                        != &Token::Delim(Delimeter::Term)
+                    && self.tokens.last().unwrap_or(&Token::Eof) != &Token::Term
                     && self.peek() != '.'
                 {
-                    self.tokens.push(Token::Delim(Delimeter::Term));
+                    self.push_token(Token::Term);
                 }
             }
             _ => unreachable!(),
@@ -373,36 +369,36 @@ impl<'a> Lexer<'a> {
         match c {
             '(' => {
                 self.paren_depth = self.paren_depth.wrapping_add(1);
-                self.tokens.push(Token::Delim(Delimeter::Lparen));
+                self.push_token(Token::Lparen);
             }
             ')' => {
                 if self.paren_depth <= 0 {
                     return Err(LexerError::new(self, "Unexpected Rparan"));
                 }
                 self.paren_depth = self.paren_depth.wrapping_sub(1);
-                self.tokens.push(Token::Delim(Delimeter::Rparen));
+                self.push_token(Token::Rparen);
             }
             '[' => {
                 self.bracket_depth = self.bracket_depth.wrapping_add(1);
-                self.tokens.push(Token::Delim(Delimeter::Lbracket));
+                self.push_token(Token::Lbracket);
             }
             ']' => {
                 if self.bracket_depth <= 0 {
                     return Err(LexerError::new(self, "Unexpected Rbracket"));
                 }
                 self.bracket_depth = self.bracket_depth.wrapping_sub(1);
-                self.tokens.push(Token::Delim(Delimeter::Rbracket));
+                self.push_token(Token::Rbracket);
             }
             '{' => {
                 self.brace_depth = self.brace_depth.wrapping_add(1);
-                self.tokens.push(Token::Delim(Delimeter::Lbrace));
+                self.push_token(Token::Lbrace);
             }
             '}' => {
                 if self.brace_depth <= 0 {
                     return Err(LexerError::new(self, "Unexpected Rbrace"));
                 }
                 self.brace_depth = self.brace_depth.wrapping_sub(1);
-                self.tokens.push(Token::Delim(Delimeter::Rbrace));
+                self.push_token(Token::Rbrace);
             }
             _ => unreachable!(),
         }
@@ -478,49 +474,45 @@ impl<'a> Lexer<'a> {
             c = self.peek();
         }
         match type_state {
-            NumLiteralType::Int => {
+            NumLiteralType::Int => self.tokens.push(Token::Int(match t.parse::<u64>() {
+                Ok(n) => n,
+                Err(e) => {
+                    return Err(LexerError::new(
+                        self,
+                        format!("Failed to parse int literal: {}", e),
+                    ));
+                }
+            })),
+            NumLiteralType::Float => self.tokens.push(Token::Float(match t.parse::<f64>() {
+                Ok(f) => f,
+                Err(e) => {
+                    return Err(LexerError::new(
+                        self,
+                        format!("Failed to parse float literal: {}", e),
+                    ));
+                }
+            })),
+            NumLiteralType::Hex => {
                 self.tokens
-                    .push(Token::Num(NumLiteral::Int(match t.parse::<u64>() {
+                    .push(Token::Int(match u64::from_str_radix(&t[2..], 16) {
                         Ok(n) => n,
-                        Err(e) => {
+                        Err(_) => {
                             return Err(LexerError::new(
                                 self,
-                                format!("Failed to parse int literal: {}", e),
+                                format!("Malformed Hex Value: {}", &t[2..]),
                             ));
                         }
-                    })))
+                    }))
             }
-            NumLiteralType::Float => {
+            NumLiteralType::Binary => {
                 self.tokens
-                    .push(Token::Num(NumLiteral::Float(match t.parse::<f64>() {
-                        Ok(f) => f,
-                        Err(e) => {
-                            return Err(LexerError::new(
-                                self,
-                                format!("Failed to parse float literal: {}", e),
-                            ));
+                    .push(Token::Int(match u64::from_str_radix(&t[2..], 2) {
+                        Ok(n) => n,
+                        Err(_) => {
+                            return Err(LexerError::new(self, "Malformed Binary Value"));
                         }
-                    })))
+                    }))
             }
-            NumLiteralType::Hex => self.tokens.push(Token::Num(NumLiteral::Int(
-                match u64::from_str_radix(&t[2..], 16) {
-                    Ok(n) => n,
-                    Err(_) => {
-                        return Err(LexerError::new(
-                            self,
-                            format!("Malformed Hex Value: {}", &t[2..]),
-                        ));
-                    }
-                },
-            ))),
-            NumLiteralType::Binary => self.tokens.push(Token::Num(NumLiteral::Int(
-                match u64::from_str_radix(&t[2..], 2) {
-                    Ok(n) => n,
-                    Err(_) => {
-                        return Err(LexerError::new(self, "Malformed Binary Value"));
-                    }
-                },
-            ))),
         };
         Ok(())
     }
@@ -604,7 +596,7 @@ impl<'a> Lexer<'a> {
                 }
             }
             c if c != '\'' && c != '\n' => {
-                self.tokens.push(Token::Char(c));
+                self.push_token(Token::Char(c));
                 self.advance();
                 if !self.match_char('\'') {
                     return Err(LexerError::new(self, "Improper Character found"));
@@ -621,27 +613,27 @@ impl<'a> Lexer<'a> {
         match self.peek() {
             'n' => {
                 self.advance();
-                self.tokens.push(Token::Char('\n'));
+                self.push_token(Token::Char('\n'));
                 return Ok(());
             }
             't' => {
                 self.advance();
-                self.tokens.push(Token::Char('\t'));
+                self.push_token(Token::Char('\t'));
                 return Ok(());
             }
             'r' => {
                 self.advance();
-                self.tokens.push(Token::Char('\r'));
+                self.push_token(Token::Char('\r'));
                 return Ok(());
             }
             '\\' => {
                 self.advance();
-                self.tokens.push(Token::Char('\\'));
+                self.push_token(Token::Char('\\'));
                 return Ok(());
             }
             '\'' => {
                 self.advance();
-                self.tokens.push(Token::Char('\''));
+                self.push_token(Token::Char('\''));
                 return Ok(());
             }
             'u' => self.lex_unicode_escape(4),
@@ -688,7 +680,7 @@ impl<'a> Lexer<'a> {
             self.advance();
         }
         if let Some(c) = char::from_u32(value) {
-            self.tokens.push(Token::Char(c));
+            self.push_token(Token::Char(c));
             return Ok(());
         } else {
             return Err(LexerError::new(
@@ -700,6 +692,11 @@ impl<'a> Lexer<'a> {
 
     fn in_braces(&self) -> bool {
         self.paren_depth > 0 || self.bracket_depth > 0 || self.brace_depth > 0
+    }
+
+    fn push_token(&mut self, tok: Token) {
+        self.span_table.push(Span::new(self));
+        self.tokens.push(tok);
     }
 }
 

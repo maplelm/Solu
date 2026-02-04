@@ -12,6 +12,17 @@ pub struct Namespace {
     pub nodes: Vec<Decl>,
 }
 
+impl fmt::Display for Namespace {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Namespace: {}\n", self.name);
+        for n in self.nodes.iter() {
+            write!(f, "\t{:?}", n);
+        }
+
+        write!(f, "\n")
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum Decl {
     Function {
@@ -28,7 +39,7 @@ pub enum Decl {
         body: Vec<Stmt>,
     },
     Struct {
-        name: String
+        name: String,
         fields: Vec<StructFieldDecl>,
     },
     Enum {
@@ -51,29 +62,94 @@ pub struct StructFieldDecl {
 
 #[derive(Debug, Clone)]
 pub enum Stmt {
+    VarDeclare {
+        mutable: bool,
+        name: String,
+        kind: Type,
+        init: Option<Expr>,
+    },
+    Assign {
+        left: Expr,
+        op: AssignOp,
+        right: Expr,
+    },
+    Expr(Expr),
+    Return(Option<Expr>),
+    Break,
+    Continue,
+    If {
+        cond: Expr,
+        elif_branches: Vec<(Expr, Vec<Stmt>)>,
+        else_body: Option<Vec<Stmt>>,
+        body: Vec<Stmt>,
+    },
+    Elif,
+    Else,
+    While {
+        cond: Expr,
+        body: Vec<Stmt>,
+    },
+    For {
+        ident: String,
+        iter: Iterator,
+        body: Vec<Stmt>,
+    },
+    Switch {
+        cond: Expr,
+        cases: Vec<SwitchCase>,
+    },
+}
+
+#[derive(Debug, Clone)]
+pub enum Iterator {
+    Object(Expr),
+    Range { min: Expr, max: Expr },
+}
+
+#[derive(Debug, Clone)]
+pub enum SwitchCase {
+    Case { pattern: Expr, body: Vec<Stmt> },
+    Default(Vec<Stmt>),
+}
+
+#[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord)]
+pub enum AssignOp {
+    Eq,     // =
+    PlusEq, // +=
+    SubEq,  // -=
+    MulEq,  // *=
+    DivEq,  // /=
+    ModEq,  // %=
+    AndEq,  // &=
+    OrEq,   // |=
+    XorEq,  // ^=
 }
 
 #[derive(Debug, Clone)]
 pub struct ParserError {
-    span: lexer::Span,
-    msg: String,
+    pub parser: Parser,
+    pub msg: String,
 }
 
 impl fmt::Display for ParserError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "failed to parse program {}, {}", self.span, self.msg)
+        write!(
+            f,
+            "{}: ({:?} {:?} {:?}) ({}) {}",
+            self.parser.span_object(),
+            self.parser.previous(),
+            self.parser.peek(),
+            self.parser.next(),
+            self.parser.pos,
+            self.msg
+        )
     }
 }
 
 impl ParserError {
-    pub fn new(par: &Parser, msg: impl Into<String>) -> Self {
+    pub fn new(parser: &Parser, msg: impl Into<String>) -> Self {
         Self {
-            span: lexer::Span {
-                start: par.pos,
-                end: par.pos,
-                line: par.pos,
-                col: par.pos,
-            },
+            parser: parser.clone(),
             msg: msg.into(),
         }
     }
@@ -87,7 +163,7 @@ pub enum ArraySize {
 
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub enum Type {
-    Array { kind: TypeBase, size: ArraySize },
+    Array { kind: TypeBase, size: Box<Expr> },
     Base(TypeBase),
 }
 
@@ -221,9 +297,11 @@ pub enum Expr {
         name: String,
         fields: Vec<StructFieldInit>,
     },
+    Char(char),
     String(String),
     Nil,
     False,
+    This,
     True,
     Int(u64),
     Float(f64),
@@ -239,9 +317,9 @@ pub enum Expr {
         object: Box<Expr>,
         name: String,
     },
-    Index{
-        array: Box<Expr>
-        index: Box<Expr>
+    Index {
+        array: Box<Expr>,
+        index: Box<Expr>,
     },
     Deref(Box<Expr>),
 }
@@ -257,8 +335,7 @@ impl Expr {
         match self {
             Self::Ident(s) => Some(s.clone()),
             Self::String(s) => Some(s.clone()),
-            _ => None
+            _ => None,
         }
     }
 }
-

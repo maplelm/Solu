@@ -1,0 +1,142 @@
+Namespace: Global
+        Struct { 
+		name: "Map", 
+		fields: [
+			StructFieldDecl { name: "width", kind: Base(Prim(I32)) },
+			StructFieldDecl { name: "length", kind: Base(Prim(I32)) },
+			StructFieldDecl { name: "depth", kind: Base(Prim(I32)) },
+			StructFieldDecl { name: "temp", kind: Base(Prim(F32)) },
+			StructFieldDecl { name: "tile_types", kind: Array { kind: Prim(I32), size: Mul { left: Deref(Int(10)), right: Int(10) } } }
+		] 
+	}
+
+	Struct { 
+		name: "Entity", 
+		fields: [
+			StructFieldDecl { name: "pos_x", kind: Base(Prim(I32)) },
+			StructFieldDecl { name: "pos_y", kind: Base(Prim(I32)) },
+			StructFieldDecl { name: "width", kind: Base(Prim(I32)) },
+			StructFieldDecl { name: "height", kind: Base(Prim(I32)) },
+			StructFieldDecl { name: "sprite", kind: Base(Prim(Char)) },
+			StructFieldDecl { name: "map", kind: Base(Ptr(Base(Ident("Map")))) },
+			StructFieldDecl { name: "ref", kind: Base(Ref(Base(Ident("Map")))) },
+			StructFieldDecl { name: "name", kind: Base(Ident("String")) }
+		]
+	}
+	Function {
+	name: "Entity",
+	params: [
+		Param { name: "x", kind: Base(Prim(I32)) },
+		Param { name: "y", kind: Base(Prim(I32)) },
+		Param { name: "c", kind: Base(Prim(Char)) },
+		Param { name: "n", kind: Base(Ident("String")) }
+	],
+	ret_type: Some(Base(Ident("Entity"))),
+	body: [
+		Assign { 
+			left: Ident("n"),
+			op: Eq, 
+			right: StructLiteral { 
+				name: "entity", 
+				fields: [
+					StructFieldInit { identifier: "pos_x", value: Ident("x") },
+					StructFieldInit { identifier: "pos_y", value: Ident("y") },
+					StructFieldInit { identifier: "width", value: Int(1) },
+					StructFieldInit { identifier: "height", value: Int(1) },
+					StructFieldInit { identifier: "sprite", value: Ident("c") },
+					StructFieldInit { identifier: "map", value: Nil },
+					StructFieldInit { identifier: "ref", value: Nil },
+					StructFieldInit { identifier: "name", value: Ident("n") }
+				]
+			}
+		}
+	]
+	}
+	Member { 
+		name: "move",
+		parent: "Entity",
+		params: [
+			Param { name: "xd", kind: Base(Prim(I32)) },
+			Param { name: "yd", kind: Base(Prim(I32)) }
+		],
+		ret_type: None,
+		body: [
+			Assign { 
+				left: Member { object: This, name: "pos_x" },
+				op: PlusEq,
+				right: Ident("xd") 
+			},
+			Assign {
+				left: Member { object: This, name: "pos_y" },
+				op: PlusEq,
+				right: Ident("yd") 
+			}
+		]
+	}
+	Function { 
+		name: "main", 
+		params: [],
+		ret_type: Some(Base(Prim(I32))),
+		body: [
+			VarDeclare {
+				mutable: false,
+				name: "x",
+				kind:Base(Prim(I32)),
+				init: Some(Int(1)) 
+			},
+			VarDeclare { 
+				mutable: false,
+				name: "a",
+				kind: Base(Prim(I32)),
+				init: Some(Int(10))
+			},
+			If { 
+				cond: True,
+				elif_branches: [],
+				else_body: None, 
+				body: [
+					Assign { 
+						left: Ident("x"),
+						op: Eq,
+						right: Int(1)
+					}
+				]
+			},
+			VarDeclare { 
+				mutable: false,
+				name: "player", 
+				kind: Base(Ident("Entity")),
+				init: Some(
+					StructLiteral {
+						name: "Entity",
+						fields: [
+							StructFieldInit { identifier: "pos_x", value: Int(16) },
+							StructFieldInit { identifier: "pos_y", value: Int(255) },
+							StructFieldInit { identifier: "width", value: Int(1) },
+							StructFieldInit { identifier: "height", value: Int(1) },
+							StructFieldInit { identifier: "sprite", value: Char('a') },
+							StructFieldInit { identifier: "map", value: Nil },
+							StructFieldInit { identifier: "ref", value: Nil },
+							StructFieldInit { identifier: "name", value: String("player") }
+						]
+					}
+				)
+			}, 
+			VarDeclare { 
+			mutable: false,
+			name: "enemy",
+			kind: Base(Ident("Entity")),
+			init: Some(Call {
+						func: Ident("Entity"), 
+						args: [
+							Int(5),
+							Int(5),
+							Char('E'),
+							String("blob")
+						]
+					}
+				) 
+			},
+			Return(Some(Ident("a")))
+		]
+	}

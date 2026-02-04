@@ -35,7 +35,7 @@ fn main() -> ExitCode {
 
     let mut lex = lexer::Lexer::new(&code);
 
-    let tokens = match lex.parse() {
+    let (tokens, span_table) = match lex.parse() {
         Ok(t) => t,
         Err(e) => {
             eprintln!(
@@ -48,7 +48,7 @@ fn main() -> ExitCode {
 
     if args.iter().any(|arg| arg == "--print") {
         for token in tokens.iter() {
-            if *token != crate::lexer::Token::Delim(crate::lexer::Delimeter::Term) {
+            if *token != crate::lexer::Token::Term {
                 print!("{}  ", token);
             } else {
                 println!("{}", token);
@@ -56,6 +56,18 @@ fn main() -> ExitCode {
         }
         return ExitCode::SUCCESS;
     }
+
+    let mut parser = parser::Parser::new(tokens, span_table);
+
+    let ast = match parser.parse() {
+        Ok(a) => a,
+        Err(e) => {
+            eprintln!("Parsing Error: {}", e);
+            return ExitCode::FAILURE;
+        }
+    };
+
+    println!("{}\n\n", ast);
 
     println!("Compiled file: {}", filename);
     return ExitCode::SUCCESS;

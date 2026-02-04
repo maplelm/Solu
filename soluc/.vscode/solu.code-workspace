@@ -1,0 +1,43 @@
+{
+    "folders": [{
+        "name": "Solu",
+        "path": "../",
+    }],
+    "tasks": {
+        "version": "2.0.0",
+        "tasks": [
+            {
+                "label": "Cargo Build Dev",
+                "command": "cargo build",
+                "type": "shell",
+                "args": [],
+                "problemMatcher": [
+                    "$rustc"
+                ],
+                "presentation": {
+                    "reveal": "always"
+                },
+                "group": {
+                    "kind": "build",
+                    "isDefault": true
+                }
+            }
+        ]
+    },
+    "launch": {
+        "version": "0.2.0",
+        "configurations": [
+            {
+                "name": "Debug Rust",
+                "type": "lldb",
+                "request": "launch",
+                "program": "${workspaceFolder}/target/debug/dvmc",
+                "args": ["../examples/syntax.sl"],
+                "cwd": "${workspaceFolder}",
+                "sourceLanguages": ["rust"],
+                "preLaunchTask": "Cargo Build Dev"
+            }
+        ],
+        "compounds": []
+    }
+}

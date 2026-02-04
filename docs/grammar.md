@@ -91,10 +91,7 @@ param ::= identifier ":" type
 
 (* Statements *)
 stmt ::= var_D
-         | func_call_stmt
-         | method_call_stmt
          | assign_stmt
-         | init_stmt
          | expr_stmt
          | ret_stmt
          | break_stmt
@@ -104,7 +101,6 @@ stmt ::= var_D
          | for_stmt_
          | switch_stmt
 var_D ::= "mut"? identifier ":" type ("=" expr)?
-init_stmt ::= lvalue "=" ( expr | assign_block)
 assign_stmt ::= lvalue assign_op (expr | assign_block)
 
 expr_stmt ::= expr
@@ -124,7 +120,6 @@ lvalue_suffix ::= "." identifier
                 | "[" expr "]"
 assign_op ::= "=" | "+=" | "-=" | "*=" | "/=" | "%=" | "&=" | "|=" | "^="
 stmt_list ::= stmt (TERM stmt)*
-init_list := init_stmt (TERM init_stmt)*
 assign_list := assign_stmt (TERM assign_stmt)*
 case_clause ::= "case" expr ":"  TERM? stmt_list?
 default_clause ::= "default" ":" TERM? stmt_list?
