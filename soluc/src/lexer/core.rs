@@ -2,21 +2,23 @@
 use super::*;
 
 #[derive(Debug, Clone)]
-pub struct Lexer<'a> {
+pub struct Lexer {
     pub span_table: Vec<Span>,
+    token_len: usize,
     pub tokens: Vec<Token>,
     pub cursor: usize,
     pub line: usize,
     pub line_start: usize,
-    pub src: &'a str,
+    pub src: String,
     pub paren_depth: usize,   // ()
     pub bracket_depth: usize, // []
     pub brace_depth: usize,   // {}
 }
 
-impl<'a> Lexer<'a> {
-    pub fn new(src: &'a str) -> Self {
+impl Lexer {
+    pub fn new(src: String) -> Self {
         Self {
+            token_len: 0,
             tokens: vec![],
             span_table: vec![],
             src,
@@ -29,7 +31,13 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    pub fn parse(&mut self) -> Result<(Vec<Token>, Vec<Span>), LexerError> {
+    pub fn parse(&mut self) -> Result<Vec<LexerObject>, LexerError> {
+        // Stip ending characters until final end
+
+        while self.src.len() > 0 && self.src.chars().last().unwrap_or('\0') != 'd' {
+            self.src.pop();
+        }
+
         loop {
             self.skip_whitespace();
             match self.peek() {
@@ -63,14 +71,14 @@ impl<'a> Lexer<'a> {
                 }
                 '\0' => {
                     self.push_token(Token::Eof);
-                    return Ok((self.tokens.clone(), self.span_table.clone()));
+                    return Ok(
+                        match LexerObject::from_vectors(&self.tokens, &self.span_table) {
+                            Ok(lo) => lo,
+                            Err(s) => return Err(LexerError::new(self, s)),
+                        },
+                    );
                 }
-                c => {
-                    // self.tokens
-                    //     .push(Token::Special(Special::Invalid(c.to_string())));
-                    // self.advance()
-                    return Err(LexerError::new(self, "Invalid token"));
-                }
+                c => return Err(LexerError::new(self, "Invalid token")),
             }
         }
     }
@@ -147,6 +155,7 @@ impl<'a> Lexer<'a> {
             "arena" => self.push_token(Token::Arena),
             "defer" => self.push_token(Token::Defer),
             "new" => self.push_token(Token::New),
+            "namespace" => self.push_token(Token::Namespace),
 
             "true" => self.push_token(Token::True),
             "false" => self.push_token(Token::False),
@@ -474,7 +483,7 @@ impl<'a> Lexer<'a> {
             c = self.peek();
         }
         match type_state {
-            NumLiteralType::Int => self.tokens.push(Token::Int(match t.parse::<u64>() {
+            NumLiteralType::Int => self.push_token(Token::Int(match t.parse::<u64>() {
                 Ok(n) => n,
                 Err(e) => {
                     return Err(LexerError::new(
@@ -483,7 +492,7 @@ impl<'a> Lexer<'a> {
                     ));
                 }
             })),
-            NumLiteralType::Float => self.tokens.push(Token::Float(match t.parse::<f64>() {
+            NumLiteralType::Float => self.push_token(Token::Float(match t.parse::<f64>() {
                 Ok(f) => f,
                 Err(e) => {
                     return Err(LexerError::new(
@@ -493,25 +502,23 @@ impl<'a> Lexer<'a> {
                 }
             })),
             NumLiteralType::Hex => {
-                self.tokens
-                    .push(Token::Int(match u64::from_str_radix(&t[2..], 16) {
-                        Ok(n) => n,
-                        Err(_) => {
-                            return Err(LexerError::new(
-                                self,
-                                format!("Malformed Hex Value: {}", &t[2..]),
-                            ));
-                        }
-                    }))
+                self.push_token(Token::Int(match u64::from_str_radix(&t[2..], 16) {
+                    Ok(n) => n,
+                    Err(_) => {
+                        return Err(LexerError::new(
+                            self,
+                            format!("Malformed Hex Value: {}", &t[2..]),
+                        ));
+                    }
+                }))
             }
             NumLiteralType::Binary => {
-                self.tokens
-                    .push(Token::Int(match u64::from_str_radix(&t[2..], 2) {
-                        Ok(n) => n,
-                        Err(_) => {
-                            return Err(LexerError::new(self, "Malformed Binary Value"));
-                        }
-                    }))
+                self.push_token(Token::Int(match u64::from_str_radix(&t[2..], 2) {
+                    Ok(n) => n,
+                    Err(_) => {
+                        return Err(LexerError::new(self, "Malformed Binary Value"));
+                    }
+                }))
             }
         };
         Ok(())
@@ -697,6 +704,7 @@ impl<'a> Lexer<'a> {
     fn push_token(&mut self, tok: Token) {
         self.span_table.push(Span::new(self));
         self.tokens.push(tok);
+        self.token_len += 1;
     }
 }
 

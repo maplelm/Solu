@@ -1,20 +1,18 @@
 #![allow(unused)]
 
-use crate::lexer::{self, Span, Token};
+use crate::lexer::{self, LexerObject, Span, Token};
 use crate::parser::types::*;
 
 #[derive(Debug, Clone)]
 pub struct Parser {
     pub pos: usize,
-    pub span_table: Vec<Span>,
-    pub tokens: Vec<Token>,
+    pub tokens: Vec<LexerObject>,
     pub ast: Namespace,
 }
 
 impl Parser {
-    pub fn new(tokens: Program, span_table: Vec<Span>) -> Self {
+    pub fn new(tokens: Vec<LexerObject>) -> Self {
         Self {
-            span_table,
             pos: 0,
             tokens,
             ast: Namespace {
@@ -43,9 +41,13 @@ impl Parser {
         let mut list = Vec::new();
         list.push(self.parse_d()?);
         while self.matches(&Token::TERM) {
-            if !self.check(&Token::Eof) {
-                list.push(self.parse_d()?);
+            if self.check(&Token::End) {
+                break;
             }
+            if self.check(&Token::Eof) {
+                return Err(ParserError::new(self, "Expected an 'END' token"));
+            }
+            list.push(self.parse_d()?);
         }
         Ok(list)
     }
@@ -279,6 +281,9 @@ impl Parser {
             }
         };
         self.expect(&Token::KEY_IS)?;
+        if self.check(&Token::TERM) {
+            self.advance();
+        }
         let declares = self.parse_decl_list()?;
         if self.check(&Token::TERM) {
             self.advance();
@@ -1019,7 +1024,7 @@ impl Parser {
 impl Parser {
     pub fn peek(&self) -> lexer::Token {
         if self.pos < self.tokens.len() {
-            self.tokens.get(self.pos).unwrap().clone()
+            self.tokens.get(self.pos).unwrap().token.clone()
         } else {
             Token::EOF
         }
@@ -1029,7 +1034,7 @@ impl Parser {
         if self.pos == 0 {
             Token::EOF
         } else if (self.pos - 1) < self.tokens.len() {
-            self.tokens.get(self.pos - 1).unwrap().clone()
+            self.tokens.get(self.pos - 1).unwrap().token.clone()
         } else {
             Token::EOF
         }
@@ -1037,7 +1042,7 @@ impl Parser {
 
     pub fn next(&self) -> lexer::Token {
         if (self.pos + 1) < self.tokens.len() {
-            self.tokens.get(self.pos + 1).unwrap().clone()
+            self.tokens.get(self.pos + 1).unwrap().token.clone()
         } else {
             Token::EOF
         }
@@ -1113,15 +1118,6 @@ impl Parser {
     }
 
     pub fn span_object(&self) -> Span {
-        if self.pos < self.span_table.len() {
-            self.span_table[self.pos].clone()
-        } else {
-            Span {
-                start: 0, // Byte offset
-                end: 0,   // Byte offset Exclusive
-                line: 0,
-                col: 0,
-            }
-        }
+        self.tokens.get(self.pos).unwrap().span.clone()
     }
 }

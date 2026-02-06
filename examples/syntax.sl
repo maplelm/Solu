@@ -1,3 +1,14 @@
+namespace testing is
+	struct TestObject is
+		msg: String
+		code: i32
+	end
+
+	is_testing(): bool do
+		return true
+	end
+end
+
 struct Map is
 	width: i32
 	length: i32
@@ -15,8 +26,8 @@ struct Entity is
 	name: String
 end
 
--- do is 93rd token
-Entity(x: i32, y:i32, c: char, n: String): Entity do
+-- Constructor --
+Entity::Entity(x: i32, y:i32, c: char, n: String): Entity do
 	n = entity with
 		pos_x = x
 		pos_y = y
@@ -24,13 +35,15 @@ Entity(x: i32, y:i32, c: char, n: String): Entity do
 		height = 1
 		sprite = c
 		name = n
-	end
-end
+end end
 
-Entity::move(xd: i32, yd: i32) do
-	this.pos_x += xd
-	this.pos_y += yd
-end
+-- Method --
+Entity::move(xd: i32, yd: i32) do this.pos_x += xd; this.pos_y += yd end
+Entity::right() do this.pos_x += 1 end
+Entity::left()  do this.pos_x -= 1 end
+Entity::up()    do this.pos_y -= 1 end
+Entity::down()  do this.pos_y += 1 end
+
 
 -- Main Entry Point for function
 main(): i32 do

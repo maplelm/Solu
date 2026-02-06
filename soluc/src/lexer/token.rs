@@ -1,210 +1,237 @@
+use crate::lexer::{LexerError, Span};
 use std::fmt;
+
+#[derive(Debug, Clone)]
+pub struct LexerObject {
+    pub token: Token,
+    pub span: Span,
+}
+
+impl LexerObject {
+    pub fn from_vectors(tokens: &[Token], spans: &[Span]) -> Result<Vec<Self>, String> {
+        if tokens.len() != spans.len() {
+            return Err(format!(
+                "LexerObject List Creation Failed, Must have equal tokens and spans | {} Tokens , {} Spans",
+                tokens.len(),
+                spans.len()
+            ));
+        }
+
+        let mut objects_list = Vec::with_capacity(tokens.len());
+        for (i, tok) in tokens.iter().enumerate() {
+            objects_list.push(Self {
+                token: tok.clone(),
+                span: spans[i],
+            });
+        }
+        Ok(objects_list)
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub enum Token {
-    Identifier(String),
-    // Number Literals
-    Int(u64),
-    Float(f64),
-    Char(char),
-    Str(String),
-    // Keywords
-    If,
-    Then,
-    Else,
-    Elif,
-    While,
-    For,
-    In,
-    Do,
-    With,
-    Is,
-    End,
-    Return,
-    Break,
-    Continue,
-    Switch,
-    Case,
-    Default,
-    Mut,
-    Struct,
-    Enum,
-    Const,
-    Namespace,
-    Type,
+    Amp,   // &
+    AmpEq, // &=
     Arena,
+    Arrow,    // ->
+    ArrowRev, // <-
+    Break,
+    Caret,   // ^
+    CaretEq, // ^=
+    Case,
+    Char(char),
+    Colon, // :
+    Comma, // ,
+    Const,
+    Continue,
+    Default,
     Defer,
-    New,
-    True,
+    Div,   // /
+    DivEq, // /=
+    Do,
+    Elif,
+    Else,
+    End,
+    Enum,
+    Eof,
+    Eq,   // =
+    EqEq, // ==
     False,
+    FatArrow, // =>
+    Float(f64),
+    For,
+    Gt,   // >
+    GtEq, // >=
+    GtGt, // >>
+    Identifier(String),
+    If,
+    In,
+    Int(u64),
+    Invalid(String),
+    Is,
+    // Keywords
+    LAnd,           // Logic And
+    Lbrace,         // {
+    Lbracket,       // [
+    LOr,            // Logic Or
+    Lparen,         // (
+    Lt,             // <
+    LtEq,           // <=
+    LtLt,           // <<
+    MemberAccessor, // .
+    Minus,          // -
+    Mod,            // %
+    ModEq,          // %=
+    Mut,
+    Namespace,
+    New,
     Nil,
-    TypeI8,
+    Not,
+    NotEq, // !=
+    // Number Literals
+    // Operators
+    Pipe,     // |
+    PipeEq,   // |=
+    Plus,     // +
+    PlusEq,   // +=
+    Range,    // ..
+    Rbrace,   // }
+    Rbracket, // ]
+    Return,
+    Rparen,    // )
+    SemiColon, // ;
+    ShiftL,    // <<
+    ShiftR,    // >>
+    Star,      // *
+    StarEq,    // *=
+    Str(String),
+    Struct,
+    SubEq, // -=
+    Switch,
+    Terinary, // a ? b : c
+    Term,     // \n
+    Then,
+    This,
+    Tilde,   // ~
+    TildeEq, // ~=
+    True,
+    Type,
+    TypeBool,
+    TypeChar,
+    TypeF32,
+    TypeF64,
     TypeI16,
     TypeI32,
     TypeI64,
-    TypeU8,
+    TypeI8,
     TypeU16,
     TypeU32,
     TypeU64,
-    TypeF32,
-    TypeF64,
-    TypeChar,
-    TypeBool,
-    This,
-    // Operators
-    Not,
-    Terinary,       // a ? b : c
-    EqEq,           // ==
-    NotEq,          // !=
-    Gt,             // >
-    GtGt,           // >>
-    Lt,             // <
-    LtLt,           // <<
-    GtEq,           // >=
-    LtEq,           // <=
-    LAnd,           // Logic And
-    LOr,            // Logic Or
-    Eq,             // =
-    PlusEq,         // +=
-    SubEq,          // -=
-    StarEq,         // *=
-    DivEq,          // /=
-    ModEq,          // %=
-    Plus,           // +
-    Star,           // *
-    Div,            // /
-    Minus,          // -
-    Mod,            // %
-    Amp,            // &
-    AmpEq,          // &=
-    Pipe,           // |
-    PipeEq,         // |=
-    Caret,          // ^
-    CaretEq,        // ^=
-    Tilde,          // ~
-    TildeEq,        // ~=
-    ShiftL,         // <<
-    ShiftR,         // >>
-    Arrow,          // ->
-    ArrowRev,       // <-
-    FatArrow,       // =>
-    Range,          // ..
-    MemberAccessor, // .
-    Lparen,         // (
-    Rparen,         // )
-    Lbracket,       // [
-    Rbracket,       // ]
-    Lbrace,         // {
-    Rbrace,         // }
-    Colon,          // :
-    Comma,          // ,
-    SemiColon,      // ;
-    Term,           // \n
-    Invalid(String),
-    Eof,
+    TypeU8,
+    While,
+    With,
 }
 
 impl fmt::Display for Token {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Token::Identifier(s) => write!(f, "IDENT({})", s),
-            Token::Char(c) => write!(f, "CHAR({})", c),
-            Token::Str(s) => write!(f, "STR({})", s),
-            Token::Int(i) => write!(f, "INT({})", i),
-            Token::Float(fl) => write!(f, "FLOAT({})", fl),
-            Token::If => write!(f, "IF"),
-            Token::Then => write!(f, "THEN"),
-            Token::Else => write!(f, "ELSE"),
-            Token::Elif => write!(f, "ELIF"),
-            Token::While => write!(f, "WHILE"),
-            Token::For => write!(f, "FOR"),
-            Token::In => write!(f, "IN"),
-            Token::Do => write!(f, "DO"),
-            Token::With => write!(f, "WITH"),
-            Token::Is => write!(f, "IS"),
-            Token::End => write!(f, "END"),
-            Token::Return => write!(f, "RETURN"),
-            Token::Break => write!(f, "BREAK"),
-            Token::Continue => write!(f, "CONTINUE"),
-            Token::Switch => write!(f, "SWITCH"),
-            Token::Case => write!(f, "CASE"),
-            Token::Default => write!(f, "DEFAULT"),
-            Token::Mut => write!(f, "MUT"),
-            Token::Struct => write!(f, "STRUCT"),
-            Token::Enum => write!(f, "ENUM"),
-            Token::Const => write!(f, "CONST"),
-            Token::Namespace => write!(f, "NAMESPACE"),
-            Token::Type => write!(f, "TYPE"),
+            Token::AmpEq => write!(f, "&="),
+            Token::Amp => write!(f, "&"),
             Token::Arena => write!(f, "ARENA"),
+            Token::ArrowRev => write!(f, "<-"),
+            Token::Arrow => write!(f, "->"),
+            Token::Break => write!(f, "BREAK"),
+            Token::CaretEq => write!(f, "^="),
+            Token::Caret => write!(f, "^"),
+            Token::Case => write!(f, "CASE"),
+            Token::Char(c) => write!(f, "CHAR({})", c),
+            Token::Colon => write!(f, ":"),
+            Token::Comma => write!(f, ","),
+            Token::Const => write!(f, "CONST"),
+            Token::Continue => write!(f, "CONTINUE"),
+            Token::Default => write!(f, "DEFAULT"),
             Token::Defer => write!(f, "DEFER"),
-            Token::New => write!(f, "NEW"),
-            Token::True => write!(f, "TRUE"),
+            Token::DivEq => write!(f, "/="),
+            Token::Div => write!(f, "/"),
+            Token::Do => write!(f, "DO"),
+            Token::Elif => write!(f, "ELIF"),
+            Token::Else => write!(f, "ELSE"),
+            Token::End => write!(f, "END"),
+            Token::Enum => write!(f, "ENUM"),
+            Token::Eof => write!(f, "EOF"),
+            Token::EqEq => write!(f, "=="),
+            Token::Eq => write!(f, "="),
             Token::False => write!(f, "FALSE"),
+            Token::FatArrow => write!(f, "=>"),
+            Token::Float(fl) => write!(f, "FLOAT({})", fl),
+            Token::For => write!(f, "FOR"),
+            Token::GtEq => write!(f, ">="),
+            Token::GtGt => write!(f, ">>"),
+            Token::Gt => write!(f, ">"),
+            Token::Identifier(s) => write!(f, "IDENT({})", s),
+            Token::If => write!(f, "IF"),
+            Token::Int(i) => write!(f, "INT({})", i),
+            Token::Invalid(s) => write!(f, "INVALID({})", s),
+            Token::In => write!(f, "IN"),
+            Token::Is => write!(f, "IS"),
+            Token::LAnd => write!(f, "&&"),
+            Token::Lbrace => write!(f, "{{"),
+            Token::Lbracket => write!(f, "["),
+            Token::LOr => write!(f, "||"),
+            Token::Lparen => write!(f, "("),
+            Token::LtEq => write!(f, "<="),
+            Token::LtLt => write!(f, "<<"),
+            Token::Lt => write!(f, "<"),
+            Token::MemberAccessor => write!(f, "."),
+            Token::Minus => write!(f, "-"),
+            Token::ModEq => write!(f, "%="),
+            Token::Mod => write!(f, "%"),
+            Token::Mut => write!(f, "MUT"),
+            Token::Namespace => write!(f, "NAMESPACE"),
+            Token::New => write!(f, "NEW"),
             Token::Nil => write!(f, "NIL"),
-            Token::TypeI8 => write!(f, "I8"),
+            Token::NotEq => write!(f, "!="),
+            Token::Not => write!(f, "!"),
+            Token::PipeEq => write!(f, "|="),
+            Token::Pipe => write!(f, "|"),
+            Token::PlusEq => write!(f, "+="),
+            Token::Plus => write!(f, "+"),
+            Token::Range => write!(f, ".."),
+            Token::Rbrace => write!(f, "}}"),
+            Token::Rbracket => write!(f, "]"),
+            Token::Return => write!(f, "RETURN"),
+            Token::Rparen => write!(f, ")"),
+            Token::SemiColon => write!(f, ";"),
+            Token::ShiftL => write!(f, "<<"),
+            Token::ShiftR => write!(f, ">>"),
+            Token::StarEq => write!(f, "*="),
+            Token::Star => write!(f, "*"),
+            Token::Str(s) => write!(f, "STR({})", s),
+            Token::Struct => write!(f, "STRUCT"),
+            Token::SubEq => write!(f, "-="),
+            Token::Switch => write!(f, "SWITCH"),
+            Token::Terinary => write!(f, "?"),
+            Token::Term => write!(f, "TERM"),
+            Token::Then => write!(f, "THEN"),
+            Token::This => write!(f, "THIS"),
+            Token::TildeEq => write!(f, "~="),
+            Token::Tilde => write!(f, "~"),
+            Token::True => write!(f, "TRUE"),
+            Token::TypeBool => write!(f, "BOOL"),
+            Token::TypeChar => write!(f, "CHAR"),
+            Token::TypeF32 => write!(f, "F32"),
+            Token::TypeF64 => write!(f, "F64"),
             Token::TypeI16 => write!(f, "I16"),
             Token::TypeI32 => write!(f, "I32"),
             Token::TypeI64 => write!(f, "I64"),
-            Token::TypeU8 => write!(f, "U8"),
+            Token::TypeI8 => write!(f, "I8"),
             Token::TypeU16 => write!(f, "U16"),
             Token::TypeU32 => write!(f, "U32"),
             Token::TypeU64 => write!(f, "U64"),
-            Token::TypeF32 => write!(f, "F32"),
-            Token::TypeF64 => write!(f, "F64"),
-            Token::TypeChar => write!(f, "CHAR"),
-            Token::TypeBool => write!(f, "BOOL"),
-            Token::This => write!(f, "THIS"),
-            Token::Not => write!(f, "!"),
-            Token::Terinary => write!(f, "?"),
-            Token::EqEq => write!(f, "=="),
-            Token::NotEq => write!(f, "!="),
-            Token::Gt => write!(f, ">"),
-            Token::GtGt => write!(f, ">>"),
-            Token::Lt => write!(f, "<"),
-            Token::LtLt => write!(f, "<<"),
-            Token::GtEq => write!(f, ">="),
-            Token::LtEq => write!(f, "<="),
-            Token::Eq => write!(f, "="),
-            Token::LAnd => write!(f, "&&"),
-            Token::LOr => write!(f, "||"),
-            Token::PlusEq => write!(f, "+="),
-            Token::SubEq => write!(f, "-="),
-            Token::StarEq => write!(f, "*="),
-            Token::DivEq => write!(f, "/="),
-            Token::ModEq => write!(f, "%="),
-            Token::Plus => write!(f, "+"),
-            Token::Star => write!(f, "*"),
-            Token::Div => write!(f, "/"),
-            Token::Minus => write!(f, "-"),
-            Token::Mod => write!(f, "%"),
-            Token::Amp => write!(f, "&"),
-            Token::AmpEq => write!(f, "&="),
-            Token::Pipe => write!(f, "|"),
-            Token::PipeEq => write!(f, "|="),
-            Token::Caret => write!(f, "^"),
-            Token::CaretEq => write!(f, "^="),
-            Token::Tilde => write!(f, "~"),
-            Token::TildeEq => write!(f, "~="),
-            Token::ShiftL => write!(f, "<<"),
-            Token::ShiftR => write!(f, ">>"),
-            Token::Arrow => write!(f, "->"),
-            Token::ArrowRev => write!(f, "<-"),
-            Token::FatArrow => write!(f, "=>"),
-            Token::Range => write!(f, ".."),
-            Token::MemberAccessor => write!(f, "."),
-
-            Token::Lparen => write!(f, "("),
-            Token::Rparen => write!(f, ")"),
-            Token::Lbracket => write!(f, "["),
-            Token::Rbracket => write!(f, "]"),
-            Token::Lbrace => write!(f, "{{"),
-            Token::Rbrace => write!(f, "}}"),
-            Token::Colon => write!(f, ":"),
-            Token::Comma => write!(f, ","),
-            Token::SemiColon => write!(f, ";"),
-            Token::Term => write!(f, "TERM"),
-            Token::Invalid(s) => write!(f, "INVALID({})", s),
-            Token::Eof => write!(f, "EOF"),
+            Token::TypeU8 => write!(f, "U8"),
+            Token::Type => write!(f, "TYPE"),
+            Token::While => write!(f, "WHILE"),
+            Token::With => write!(f, "WITH"),
         }
     }
 }

@@ -1,6 +1,6 @@
 #![allow(unused)]
 use super::core::Parser;
-use crate::lexer;
+use crate::lexer::{self, Span};
 use std::fmt;
 
 pub type Program = Vec<lexer::Token>;
