@@ -4,7 +4,7 @@ use crate::parser::types::Type;
 pub struct SymbolId(u32);
 
 pub struct Symbol {
-    //pub name: String, -- Should be contained in the hashmap
+    pub name: String,
     pub span: Span,
     pub datatype: Type,
     pub kind: SymbolKind,
@@ -13,8 +13,9 @@ pub struct Symbol {
 }
 
 impl Symbol {
-    pub fn new(span: Span, t: Type, kind: SymbolKind) -> Self {
+    pub fn new(name: impl Into<String>, span: Span, t: Type, kind: SymbolKind) -> Self {
         Self {
+            name: name.into(),
             span,
             datatype: t,
             kind,

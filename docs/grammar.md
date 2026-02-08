@@ -172,7 +172,7 @@ primary_expr ::= int_literal
                 | binary_literal
                 | "nil"
                 | struct_literal
-                | identifier
+                | identifier ("::" identifier)*
                 | "(" expr ")"
 postfix_expr ::= primary_expr (postfix_op)*
 postfix_op ::= "(" (expr ("," expr)*)? ")"

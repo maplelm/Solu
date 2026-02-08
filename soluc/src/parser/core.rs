@@ -8,6 +8,7 @@ pub struct Parser {
     pub pos: usize,
     pub tokens: Vec<LexerObject>,
     pub ast: Namespace,
+    pub namespace_depth: usize,
 }
 
 impl Parser {
@@ -19,6 +20,7 @@ impl Parser {
                 name: "Global".to_string(),
                 nodes: vec![],
             },
+            namespace_depth: 0,
         }
     }
 
@@ -33,7 +35,9 @@ impl Parser {
 
     // P ::= decl_list
     fn parse_p(&mut self) -> Result<Vec<Decl>, ParserError> {
-        self.parse_decl_list()
+        let output = self.parse_decl_list()?;
+        self.expect(&Token::Eof)?;
+        Ok(output)
     }
 
     // decl_list ::= D (TERM D)*
@@ -945,7 +949,7 @@ impl Parser {
                 Ok(Expr::This)
             }
             Token::Identifier(s) => {
-                if !(self.next() == Token::KEY_WITH) {
+                if self.next() != Token::KEY_WITH {
                     self.advance();
 
                     Ok(Expr::Ident(s))

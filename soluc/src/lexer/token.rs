@@ -40,8 +40,9 @@ pub enum Token {
     CaretEq, // ^=
     Case,
     Char(char),
-    Colon, // :
-    Comma, // ,
+    Colon,       // :
+    DoubleColon, // ::
+    Comma,       // ,
     Const,
     Continue,
     Default,
@@ -146,6 +147,7 @@ impl fmt::Display for Token {
             Token::Case => write!(f, "CASE"),
             Token::Char(c) => write!(f, "CHAR({})", c),
             Token::Colon => write!(f, ":"),
+            Token::DoubleColon => write!(f, "::"),
             Token::Comma => write!(f, ","),
             Token::Const => write!(f, "CONST"),
             Token::Continue => write!(f, "CONTINUE"),
@@ -336,6 +338,7 @@ impl Token {
     pub const LBRACE: Token = Self::Lbrace;
     pub const RBRACE: Token = Self::Rbrace;
     pub const COLON: Token = Self::Colon;
+    pub const DOUBLECOLON: Token = Self::DoubleColon;
     pub const COMMA: Token = Self::Comma;
     pub const SEMICOLON: Token = Self::SemiColon;
     pub const TERM: Token = Self::Term;

@@ -352,7 +352,8 @@ impl Lexer {
 
     fn lex_delim(&mut self, c: char) -> Result<(), LexerError> {
         match c {
-            ':' => self.push_token(Token::Colon),
+            ':' if self.next() != ':' => self.push_token(Token::Colon),
+            ':' if self.next() == ':' => self.push_token(Token::DoubleColon),
             ',' => self.push_token(Token::Comma),
             ';' => self.push_token(Token::Term),
             '\n' => {

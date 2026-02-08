@@ -4,6 +4,14 @@ use super::symbol::{Symbol, SymbolId, SymbolKind, SymbolTable};
 use crate::parser::Namespace;
 use crate::parser::types::Decl;
 
+/*
+* Pass 1: Collect all top-level declarations
+* Pass 2: Parse namespaces recursivly
+* Pass 3: Resolve Generics / Interfaces (Not going to implement in the first version)
+* Pass 4: Resolve types and validate signatures
+* Pass 5: Type-check function bodies
+*/
+
 pub struct SymanticAnalysis {
     pub symbols: SymbolTable,
     pub scopes: ScopeStack,
@@ -19,7 +27,20 @@ impl SymanticAnalysis {
         }
     }
 
-    pub fn analyse(&mut self) {}
+    pub fn analyse(&mut self) -> Result<(), super::error::SymanticError> {
+        self.analyse_definitions()?;
+        self.analyse_signatures()?;
+        self.analyse_types()?;
+        Ok(())
+    }
+
+    fn analyse_signatures(&mut self) -> Result<(), super::error::SymanticError> {
+        todo!()
+    }
+
+    fn analyse_types(&mut self) -> Result<(), super::error::SymanticError> {
+        todo!()
+    }
 
     fn analyse_definitions(&mut self) -> Result<(), super::error::SymanticError> {
         let mut pos = 0;
