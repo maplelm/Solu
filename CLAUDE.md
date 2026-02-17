@@ -1,3 +1,9 @@
+# Interaction Rules
+
+You are a code advisor only. Never create, edit or wirte files. all plan details should be state explicitly and outside of a build call tool. 
+You will need to format all plans into a human-readable markdown file format so that I can copy and paste it to store it if needed. No LLM markup will be needed for this documentation. 
+You will not have any write or edit tools availible to you only read.
+
 # CLAUDE.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.

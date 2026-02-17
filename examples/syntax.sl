@@ -1,66 +1,63 @@
-namespace testing is
-	struct TestObject is
-		msg: String
-		code: i32
+namespace math is
+
+	namespace Calculus is
+		const HARD: bool = true
 	end
 
-	is_testing(): bool do
-		return true
+	const PI: f32 = 3.1415
+	const E: f32 = 2.7182
+
+	enum Sign is
+		Positive
+		Negative
+	end
+
+	struct Vector is
+		magnitude: f32
+		angle: i32
+	end
+
+	Vector::Vector(mag: f32, angle: f32) do
+		this.magnitude = mag
+		this.angle = angle
+	end
+
+	Vector::add(v: Vector) do
+		this.magnitude += v.magnitude
+		this.angle += v.angle
 	end
 end
 
-struct Map is
-	width: i32
-	length: i32
-	depth: i32
-	temp: f32
-	tile_types : i32[10*10*10] 
+struct Instance is
+	is_running: bool
+	speed: math::Vector
 end
 
-struct Entity is
-	pos_x: i32
-	pos_y: i32
-	width: i32
-	height: i32
-	sprite: char
-	name: String
+-- this . is_running = true
+Instance::Instance() do
+	this.is_running = true
+	this.speed = math::Vector(0,0)
 end
-
--- Constructor --
-Entity::Entity(x: i32, y:i32, c: char, n: String): Entity do
-	n = entity with
-		pos_x = x
-		pos_y = y
-		width = 1
-		height = 1
-		sprite = c
-		name = n
-end end
-
--- Method --
-Entity::move(xd: i32, yd: i32) do this.pos_x += xd; this.pos_y += yd end
-Entity::right() do this.pos_x += 1 end
-Entity::left()  do this.pos_x -= 1 end
-Entity::up()    do this.pos_y -= 1 end
-Entity::down()  do this.pos_y += 1 end
-
 
 -- Main Entry Point for function
 main(): i32 do
-	x: i32 = 1
-	a: i32 = 10
-	if true then
-		x = 1
+	a: math::Vector = math::Vector(1,2)
+	b: math::Vector = math::Vector(1,2)
+	c: math::Vector = a
+	c.add(b)
+	if c.angle >= 360 then
+		a.add(b)
+		-- print something about full circle
+	elif c.angle < 0 then
+		b.add(c)
+		-- print something about going in reverse
+	else
+		c.add(a)
+		-- print something about going no were
 	end
-	player: Entity = Entity with
-		pos_x = 0b10000
-		pos_y = 0xFF
-		width = 1
-		height = 1
-		sprite = '\u0061'
-		name = "player"
+
+	while c.angle < 360 do
+		c.angle += 5
 	end
-	enemy: Entity = Entity(5, 5, 'E', "blob")
-	-- some sort of standard library to print the state of the player and the enemy
-	return a
+	return 0
 end

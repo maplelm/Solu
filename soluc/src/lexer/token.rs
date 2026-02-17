@@ -1,4 +1,4 @@
-use crate::lexer::{LexerError, Span};
+use crate::lexer::Span;
 use std::fmt;
 
 #[derive(Debug, Clone)]
@@ -30,107 +30,107 @@ impl LexerObject {
 
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub enum Token {
-    Amp,   // &
-    AmpEq, // &=
-    Arena,
-    Arrow,    // ->
-    ArrowRev, // <-
-    Break,
-    Caret,   // ^
-    CaretEq, // ^=
-    Case,
-    Char(char),
-    Colon,       // :
-    DoubleColon, // ::
-    Comma,       // ,
-    Const,
-    Continue,
-    Default,
-    Defer,
-    Div,   // /
-    DivEq, // /=
-    Do,
-    Elif,
-    Else,
-    End,
-    Enum,
-    Eof,
-    Eq,   // =
-    EqEq, // ==
-    False,
-    FatArrow, // =>
-    Float(f64),
-    For,
-    Gt,   // >
-    GtEq, // >=
-    GtGt, // >>
-    Identifier(String),
-    If,
-    In,
-    Int(u64),
-    Invalid(String),
-    Is,
+    Amp,                // & (discr 1)
+    AmpEq,              // &= (discr 2)
+    Arena,              // discr 3
+    Arrow,              // -> (discr 4)
+    ArrowRev,           // <- (discr 5)
+    Break,              // discr 6
+    Caret,              // ^ (discr 7)
+    CaretEq,            // ^= (discr 8)
+    Case,               // discr 9
+    Char(char),         // discr 10
+    Colon,              // : (discr 11)
+    DoubleColon,        // :: (discr 12)
+    Comma,              // , (discr 13)
+    Const,              // discr 14
+    Continue,           // discr 14
+    Default,            // discr 15
+    Defer,              // discr 16
+    Div,                //  (discr 17)
+    DivEq,              //  (discr 18)
+    Do,                 // discr 19
+    Elif,               // discr 20
+    Else,               // discr 21
+    End,                // discr 22
+    Enum,               // discr 23
+    Eof,                // discr 24
+    Eq,                 // = (discr 25)
+    EqEq,               // == (discr 26)
+    False,              // discr 27
+    FatArrow,           // => (discr 28)
+    Float(f64),         // discr 29
+    For,                // discr 30
+    Gt,                 // >// discr 31
+    GtEq,               // >=// discr 32
+    GtGt,               // >>// discr 33
+    Identifier(String), // discr 34
+    If,                 // discr 35
+    In,                 // discr 36
+    Int(u64),           // discr 37
+    Invalid(String),    // discr 38
+    Is,                 // discr 39
     // Keywords
-    LAnd,           // Logic And
-    Lbrace,         // {
-    Lbracket,       // [
-    LOr,            // Logic Or
-    Lparen,         // (
-    Lt,             // <
-    LtEq,           // <=
-    LtLt,           // <<
-    MemberAccessor, // .
-    Minus,          // -
-    Mod,            // %
-    ModEq,          // %=
-    Mut,
-    Namespace,
-    New,
-    Nil,
-    Not,
-    NotEq, // !=
+    LAnd,           // Logic (discr 40)
+    Lbrace,         // { (discr 41)
+    Lbracket,       // [ (discr 42)
+    LOr,            // Logic Or (discr 43)
+    Lparen,         // ( (discr 44)
+    Lt,             // < (discr 45)
+    LtEq,           // <= (discr 46)
+    LtLt,           // << (discr 47)
+    MemberAccessor, // . (discr 48)
+    Minus,          // - (discr 49)
+    Mod,            // % (discr 50)
+    ModEq,          // %= (discr 51)
+    Mut,            // discr 52
+    Namespace,      // discr 53
+    New,            // discr 54
+    Nil,            // discr 55
+    Not,            // discr 56
+    NotEq,          // !=  (discr 57)
     // Number Literals
     // Operators
-    Pipe,     // |
-    PipeEq,   // |=
-    Plus,     // +
-    PlusEq,   // +=
-    Range,    // ..
-    Rbrace,   // }
-    Rbracket, // ]
-    Return,
-    Rparen,    // )
-    SemiColon, // ;
-    ShiftL,    // <<
-    ShiftR,    // >>
-    Star,      // *
-    StarEq,    // *=
-    Str(String),
-    Struct,
-    SubEq, // -=
-    Switch,
-    Terinary, // a ? b : c
-    Term,     // \n
-    Then,
-    This,
-    Tilde,   // ~
-    TildeEq, // ~=
-    True,
-    Type,
-    TypeBool,
-    TypeChar,
-    TypeF32,
-    TypeF64,
-    TypeI16,
-    TypeI32,
-    TypeI64,
-    TypeI8,
-    TypeU16,
-    TypeU32,
-    TypeU64,
-    TypeU8,
-    While,
-    With,
+    Pipe,        // | (discr 58)
+    PipeEq,      // |= (discr 59)
+    Plus,        // + (discr 60)
+    PlusEq,      // += (discr 61)
+    Range,       // .. (discr 62)
+    Rbrace,      // } (discr 63)
+    Rbracket,    // ] (discr 64)
+    Return,      // discr 65
+    Rparen,      // ) (discr 66)
+    SemiColon,   // ; (discr 67)
+    ShiftL,      // << (discr 69)
+    ShiftR,      // >> (discr 70)
+    Star,        // * (discr 71)
+    StarEq,      // *= (discr 72)
+    Str(String), // discr 73
+    Struct,      // discr 74
+    SubEq,       // -= (discr 75)
+    Switch,      // discr 76
+    Terinary,    // a ? b : c (discr 77)
+    Term,        // \n (discr 78)
+    Then,        // discr 79
+    This,        // discr 80
+    Tilde,       // ~ (discr 81)
+    TildeEq,     // ~=  (discr 82)
+    True,        // discr 83
+    Type,        // discr 84
+    TypeBool,    // discr 85
+    TypeChar,    // discr 86
+    TypeF32,     // discr 87
+    TypeF64,     // discr 88
+    TypeI16,     // discr 89
+    TypeI32,     // discr 90
+    TypeI64,     // discr 91
+    TypeI8,      // discr 92
+    TypeU16,     // discr 99
+    TypeU32,     // discr 99
+    TypeU64,     // discr 99
+    TypeU8,      // discr 100
+    While,       // discr 101
+    With,        // discr 102
 }
 
 impl fmt::Display for Token {
@@ -357,6 +357,12 @@ impl Token {
             Self::Str(s) => Some(s.clone()),
             Self::Invalid(s) => Some(s.clone()),
             _ => None,
+        }
+    }
+    pub fn is_ident(&self) -> bool {
+        match self {
+            Self::Identifier(_) => true,
+            _ => false,
         }
     }
 }

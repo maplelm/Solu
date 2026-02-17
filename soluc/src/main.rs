@@ -70,7 +70,11 @@ fn main() -> ExitCode {
         }
     };
 
-    println!("{}\n\n", ast);
+    let mut sym = symantic::SymanticAnalysis::new(ast);
+    match sym.analyse() {
+        Ok(_) => {}
+        Err(e) => eprintln!("Syumantic Analysis Error: {}", e),
+    }
 
     println!("Compiled file: {}", filename);
     return ExitCode::SUCCESS;

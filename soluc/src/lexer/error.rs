@@ -16,7 +16,7 @@ impl LexerError {
 }
 
 // Used to track where lexer is in file for error messaging
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Ord, PartialOrd)]
 pub struct Span {
     pub start: usize, // Byte offset
     pub end: usize,   // Byte offset Exclusive

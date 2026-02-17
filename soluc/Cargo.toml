@@ -3,4 +3,15 @@ name = "dvmc"
 version = "0.1.0"
 edition = "2024"
 
+[profile.dev]
+opt-level = 0
+debug = true
+overflow-checks = true
+lto = false
+
+[profile.release]
+opt-level = 3
+debug = false
+lto = true
+
 [dependencies]

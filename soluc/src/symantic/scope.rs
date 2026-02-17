@@ -2,6 +2,51 @@ use super::error::SymanticError;
 use crate::symantic::symbol::*;
 use std::collections::HashMap;
 
+pub struct ScopePosition {
+    pos: usize,
+    history: Vec<usize>,
+}
+
+impl From<ScopePosition> for usize {
+    fn from(value: ScopePosition) -> Self {
+        value.pos
+    }
+}
+
+impl ScopePosition {
+    pub fn new(start_pos: usize) -> Self {
+        Self {
+            pos: start_pos,
+            history: vec![],
+        }
+    }
+
+    pub fn next(&mut self, index: impl Into<usize>) {
+        self.history.push(self.pos);
+        self.pos = index.into()
+    }
+
+    pub fn back(&mut self) -> usize {
+        self.pos = self.history.pop().unwrap_or(0);
+        self.pos
+    }
+
+    pub fn prev(&self) -> usize {
+        match self.history.last() {
+            Some(n) => n.clone(),
+            None => 0,
+        }
+    }
+
+    pub fn index(&self) -> usize {
+        self.pos
+    }
+
+    pub fn depth(&self) -> usize {
+        self.history.len()
+    }
+}
+
 pub struct Scope {
     pub parent: Option<usize>,
     pub symbols: HashMap<String, SymbolId>,
@@ -15,40 +60,40 @@ impl Scope {
         }
     }
 
-    pub fn set_parent(mut self, parent: usize) -> Self {
-        self.parent = Some(parent);
+    pub fn set_parent(mut self, parent: impl Into<usize>) -> Self {
+        self.parent = Some(parent.into());
         self
     }
 }
 
 pub struct ScopeStack {
-    pub pos: usize,
+    pub pos: ScopePosition,
     pub stack: Vec<Scope>,
 }
 
 impl ScopeStack {
     pub fn new() -> Self {
         Self {
-            pos: 0,
-            stack: Vec::new(),
+            pos: ScopePosition::new(0),
+            stack: vec![Scope::new()],
         }
     }
 
-    pub fn enter_scope(&mut self) {
-        self.pos = self.stack.len();
-        self.stack.push(Scope::new());
+    pub fn enter_scope(&mut self) -> usize {
+        self.pos.next(self.stack.len());
+        self.stack.push(Scope::new().set_parent(self.pos.prev()));
+        self.pos.index()
     }
 
-    pub fn exit_scope(&mut self) -> Result<(), SymanticError> {
-        match self.stack[self.pos].parent {
-            Some(p) => self.pos = p,
-            None => return Err(SymanticError::new(self, "Scope Underflow")),
-        };
-        Ok(())
+    pub fn exit_scope(&mut self) -> Result<usize, SymanticError> {
+        if self.pos.depth() > 0 {
+            Ok(self.pos.back())
+        } else {
+            Err(SymanticError::new(self, "Scope Underflow"))
+        }
     }
 
-    pub fn insert(&mut self, sym: SymbolId) {
-        self.stack[self.pos].symbols.insert("".to_string(), sym);
-        todo!()
+    pub fn insert(&mut self, key: impl Into<String>, sym: SymbolId) {
+        self.stack[self.pos.index()].symbols.insert(key.into(), sym);
     }
 }

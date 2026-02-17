@@ -70,8 +70,6 @@ impl Parser {
 
     // struct_D ::= "struct identifier "is" TERM? member_list_D TERM? "end"
     fn parse_struct_d(&mut self) -> Result<Decl, ParserError> {
-        #[cfg(debug_assertions)]
-        println!("Parsing a struct...");
         self.expect(&Token::KEY_STRUCT)?;
         let name = match self.expect(&Token::IDENTIFER)?.to_string() {
             Some(s) => s,
@@ -84,12 +82,8 @@ impl Parser {
             self.advance();
         }
 
-        #[cfg(debug_assertions)]
-        println!("\tParsing Declaration statements of Struct...");
         let body = self.parse_declare_list()?;
 
-        #[cfg(debug_assertions)]
-        println!("\t Expecting End of Struct...");
         self.expect(&Token::KEY_END)?;
         Ok(Decl::Struct {
             name: name,
@@ -98,24 +92,18 @@ impl Parser {
     }
 
     fn parse_declare_list(&mut self) -> Result<Vec<StructFieldDecl>, ParserError> {
-        #[cfg(debug_assertions)]
-        println!("\tParsing first Delcaration statement...");
         let mut list = vec![self.parse_declare_member()?];
         while self.matches(&Token::TERM) {
             if self.peek() == Token::KEY_END {
                 break;
             }
 
-            #[cfg(debug_assertions)]
-            println!("\tarsing Consecutive Delcaration...");
             list.push(self.parse_declare_member()?);
         }
         Ok(list)
     }
 
     fn parse_declare_member(&mut self) -> Result<StructFieldDecl, ParserError> {
-        #[cfg(debug_assertions)]
-        println!("\t\tGetting Identifier for Declaration...");
         let name = match self.expect(&Token::IDENTIFER)?.to_string() {
             Some(s) => s,
             None => {
@@ -126,14 +114,8 @@ impl Parser {
             }
         };
 
-        #[cfg(debug_assertions)]
-        println!("\t\tExpecting Identifer Type Seperator colon...");
         self.expect(&Token::COLON)?;
-        #[cfg(debug_assertions)]
-        println!("\t\tParsing type for declaration...");
         let t = self.parse_type()?;
-        #[cfg(debug_assertions)]
-        println!("\t\tReturning Field Declaration...");
 
         Ok(StructFieldDecl {
             name: name,
@@ -231,14 +213,11 @@ impl Parser {
                 })
             }
             // Member Function
-            Token::COLON if self.next() == Token::COLON => {
-                let parent = match self.previous().to_string() {
+            Token::DoubleColon => {
+                let mut parent = match self.previous().to_string() {
                     Some(s) => s,
-                    None => {
-                        return Err(ParserError::new(self, "Invalid Member Parent Name"));
-                    }
+                    None => return Err(ParserError::new(self, "Invalid Identifer")),
                 };
-                self.advance();
                 self.advance();
                 let name = match self.expect(&Token::IDENTIFER)?.to_string() {
                     Some(s) => s,
@@ -592,24 +571,18 @@ impl Parser {
     }
 
     fn parse_type(&mut self) -> Result<Type, ParserError> {
-        if self.check(&Token::COLON) {
-            self.advance();
-        }
-        #[cfg(debug_assertions)]
-        println!("Parsing Base Type...");
         let base = self.parse_type_base()?;
-        #[cfg(debug_assertions)]
-        println!("Checking if type array...");
         if self.matches(&Token::LBRACKET) {
-            if self.matches_any(&[Token::INT, Token::IDENTIFER]) {
-                let size = self.parse_expr()?;
-                self.expect(&Token::RBRACKET)?;
-                Ok(Type::Array {
-                    kind: base,
-                    size: Box::new(size),
-                })
-            } else {
-                Err(ParserError::new(self, "improper array specificiation"))
+            match self.peek() {
+                Token::Int(_) | Token::Identifier(_) => {
+                    let s = self.parse_expr()?;
+                    self.expect(&Token::RBRACKET)?;
+                    Ok(Type::Array {
+                        kind: base,
+                        size: Box::new(s),
+                    })
+                }
+                _ => Err(ParserError::new(self, "improper array specification")),
             }
         } else {
             Ok(Type::Base(base))
@@ -627,8 +600,8 @@ impl Parser {
                 Ok(TypeBase::Ref(Box::new(self.parse_type()?)))
             }
             Token::Identifier(s) => {
-                self.advance();
-                Ok(TypeBase::Ident(s))
+                let mut qn = self.qualified_name()?;
+                Ok(TypeBase::Ident(qn))
             }
             _ => Ok(TypeBase::Prim(self.parse_primitive_type()?)),
         }
@@ -882,12 +855,8 @@ impl Parser {
             let sym = self.previous();
             expr = match sym {
                 Token::LPAREN => {
-                    #[cfg(debug_assertions)]
-                    println!("parsing first arg in func/mem call");
                     let mut args = vec![self.parse_expr()?];
                     while self.matches(&Token::COMMA) {
-                        #[cfg(debug_assertions)]
-                        println!("parsing next arg in func/mem call");
                         args.push(self.parse_expr()?);
                     }
                     self.expect(&Token::RPAREN)?;
@@ -950,9 +919,7 @@ impl Parser {
             }
             Token::Identifier(s) => {
                 if self.next() != Token::KEY_WITH {
-                    self.advance();
-
-                    Ok(Expr::Ident(s))
+                    Ok(Expr::Ident(self.qualified_name()?))
                 } else {
                     self.parse_struct_literal()
                 }
@@ -972,8 +939,6 @@ impl Parser {
 
     // assign_block == struct_literal
     fn parse_struct_literal(&mut self) -> Result<Expr, ParserError> {
-        #[cfg(debug_assertions)]
-        println!("parse_struct_literal name: {:?}", self.previous());
         let name = self.peek();
         if self.next() == Token::TERM {
             self.advance();
@@ -982,7 +947,7 @@ impl Parser {
             self.advance();
         }
         Ok(Expr::StructLiteral {
-            name: name.to_string().unwrap(),
+            name: name.to_string().unwrap().into(),
             fields: self.parse_assign_block()?,
         })
     }
@@ -1054,10 +1019,8 @@ impl Parser {
 
     fn check(&self, tok: &lexer::Token) -> bool {
         if std::mem::discriminant(tok) == std::mem::discriminant(&self.peek()) {
-            println!("({} == {}) TRUE", tok, &self.peek());
             true
         } else {
-            println!("({} == {}) FALSE", tok, &self.peek());
             false
         }
     }
@@ -1088,14 +1051,10 @@ impl Parser {
 
     fn expect(&mut self, tok: &lexer::Token) -> Result<lexer::Token, ParserError> {
         let t = self.peek();
-        #[cfg(debug_assertions)]
-        println!("Expecting type {:?} Got {:?}", tok, t);
 
         if std::mem::discriminant(tok) != std::mem::discriminant(&t) {
             return Err(ParserError::new(self, format!("expected token: {}", *tok)));
         }
-        #[cfg(debug_assertions)]
-        println!("Adancing Pos");
         self.advance();
         Ok(t)
     }
@@ -1123,5 +1082,14 @@ impl Parser {
 
     pub fn span_object(&self) -> Span {
         self.tokens.get(self.pos).unwrap().span.clone()
+    }
+
+    pub fn qualified_name(&mut self) -> Result<QualifiedName, ParserError> {
+        let mut qn =
+            QualifiedName::from_string((self.expect(&Token::IDENTIFER)?.to_string().unwrap()));
+        while self.matches(&Token::DoubleColon) {
+            qn.push(self.expect(&Token::IDENTIFER)?.to_string().unwrap());
+        }
+        Ok(qn)
     }
 }

@@ -37,9 +37,7 @@ Standard library APIs
 
 ## Grammar & Syntax
 
-### Full Grammar Spec
-
-EBNF (Extended Backus-Naur Form) is used to specify Dune grammar.
+EBNF (Extended Backus-Naur Form) is used to specify Solu grammar.
 
 __Level__ is of desending presedence. (1 == highest)
 
@@ -79,8 +77,8 @@ enum_D ::= "enum" identifier "is"
                 TERM? "end"
 const_D ::= "const" identifier ":" type "=" expr
 func_D ::= identifier "(" params? ")" (":" type)? stmt_block
-method_D ::= identifier "::" identifier "(" param_list? ")" (":" type)? stmt_block
-namespace_D ::= "namespace" identifier "is TERM? decl_list TERM? "end"
+method_D ::= identifier "::" identifier "(" params? ")" (":" type)? stmt_block
+namespace_D ::= "namespace" identifier "is" TERM? decl_list TERM? "end"
 
 member_list_D ::= member_D (TERM member_D)*
 member_D ::= identifier ":" type
@@ -98,7 +96,7 @@ stmt ::= var_D
          | cont_stmt
          | if_stmt
          | while_stmt
-         | for_stmt_
+         | for_stmt
          | switch_stmt
 var_D ::= "mut"? identifier ":" type ("=" expr)?
 assign_stmt ::= lvalue assign_op (expr | assign_block)
@@ -115,15 +113,15 @@ switch_stmt ::= "switch" (expr) "then" TERM?
                 default_clause?
                 TERM? "end"
 
-lvalue ::= "*"* identifier (lvalue_suffix)*
+lvalue ::= "*"* qualified_name (lvalue_suffix)*
 lvalue_suffix ::= "." identifier
                 | "[" expr "]"
 assign_op ::= "=" | "+=" | "-=" | "*=" | "/=" | "%=" | "&=" | "|=" | "^="
 stmt_list ::= stmt (TERM stmt)*
-assign_list := assign_stmt (TERM assign_stmt)*
+assign_list ::= assign_stmt (TERM assign_stmt)*
 case_clause ::= "case" expr ":"  TERM? stmt_list?
 default_clause ::= "default" ":" TERM? stmt_list?
-field_init ::= identifier "=" expr
+field_init ::= identifer "=" expr
 field_list ::= field_init (TERM field_init)*
 
 (* Blocks *)
@@ -135,13 +133,13 @@ stmt_block ::= "do" TERM? stmt_list
                 TERM? "end"
 decl_block ::= "is" TERM? decl_list
                 TERM? "end"
-assign_block ::= identifier "with" TERM? field_list
+assign_block ::= qualified_name "with" TERM? field_list
                 TERM? "end"
 
 (* Types *)
-type ::= type_base ("[" (identifier | digit+ ) "]")?
+type ::= type_base ("[" (qualified_name | digit+ ) "]")?
 type_base ::= primitive_type
-                | identifier
+                | qualified_name
                 | "*" type
                 | "&" type
 primitive_type ::= "i8" | "i16" | "i32" | "i64"
@@ -172,7 +170,7 @@ primary_expr ::= int_literal
                 | binary_literal
                 | "nil"
                 | struct_literal
-                | identifier ("::" identifier)*
+                | qualified_name
                 | "(" expr ")"
 postfix_expr ::= primary_expr (postfix_op)*
 postfix_op ::= "(" (expr ("," expr)*)? ")"
@@ -191,10 +189,14 @@ HEX_LIT ::= "0x" hexdigit+
 BIN_LIT ::= "0b" ("0" | "1")+
 hex_digit ::= "0"..."9" | "a"..."f" | "A"..."F"
 digit ::= ("0"..."9")
+qualified_name ::= identifier ( "::" identifier )*
 identifier ::= (letter | "_") (letter | digit | "_")*
 letter     ::= "a"…"z" | "A"…"Z"
 digit      ::= "0"…"9"
 ```
+
+### Full Grammar Spec
+
 
 ### Lexical vs Syntactic Rules
 

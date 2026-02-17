@@ -3,6 +3,16 @@
         "name": "Solu",
         "path": "../",
     }],
+    "settings": {
+        "rust-analyzer.debug.engine": "llvm-vs-code-extensions.lldb-dap",
+        "rust-analyzer.debug.engineSettings": {
+            "setupCommands": [{
+                "description": "Enable pretty-printing for lldb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": false,
+            }]
+        }
+    },
     "tasks": {
         "version": "2.0.0",
         "tasks": [
@@ -34,6 +44,9 @@
                 "program": "${workspaceFolder}/target/debug/dvmc",
                 "args": ["../examples/syntax.sl"],
                 "cwd": "${workspaceFolder}",
+                "initCommands": [
+                    "command script import \"${env:HOME}/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/etc/lldb_lookup.py\""
+                ],
                 "sourceLanguages": ["rust"],
                 "preLaunchTask": "Cargo Build Dev"
             }

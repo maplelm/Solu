@@ -1,8 +1,7 @@
 #![allow(unused)]
 use super::core::Parser;
 use crate::lexer::{self, Span};
-use std::fmt;
-
+use std::fmt::{self, Write};
 pub type Program = Vec<lexer::Token>;
 pub type Ast = Vec<Namespace>;
 
@@ -22,6 +21,10 @@ impl fmt::Display for Namespace {
         write!(f, "\n")
     }
 }
+
+//////////////////
+// Declarations //
+//////////////////
 
 #[derive(Debug, Clone)]
 pub enum Decl {
@@ -54,11 +57,15 @@ pub enum Decl {
     },
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub struct StructFieldDecl {
     pub name: String,
     pub kind: Type,
 }
+
+////////////////
+// Statements //
+////////////////
 
 #[derive(Debug, Clone)]
 pub enum Stmt {
@@ -125,6 +132,10 @@ pub enum AssignOp {
     XorEq,  // ^=
 }
 
+////////////////
+// Error Type //
+////////////////
+
 #[derive(Debug, Clone)]
 pub struct ParserError {
     pub parser: Parser,
@@ -155,10 +166,14 @@ impl ParserError {
     }
 }
 
+////////////////
+// Data Types //
+////////////////
+
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub enum ArraySize {
     Usize(usize),
-    Identifier(String),
+    Identifier(QualifiedName),
 }
 
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
@@ -167,12 +182,34 @@ pub enum Type {
     Base(TypeBase),
 }
 
+impl fmt::Display for Type {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Base(t) => write!(f, "{}", t),
+            Self::Array { kind, size } => write!(f, "{}[{}]", kind, size),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub enum TypeBase {
-    Ident(String),
+    Ident(QualifiedName),
     Prim(TypePrim),
+    Enum,
     Ptr(Box<Type>),
     Ref(Box<Type>),
+}
+
+impl fmt::Display for TypeBase {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Ident(s) => write!(f, "{}", s),
+            Self::Prim(p) => write!(f, "{}", p),
+            Self::Enum => write!(f, "Enum"),
+            Self::Ptr(t) => write!(f, "*{}", t),
+            Self::Ref(t) => write!(f, "&{}", t),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
@@ -191,19 +228,35 @@ pub enum TypePrim {
     Bool,
 }
 
+impl fmt::Display for TypePrim {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::I8 => write!(f, "I8"),
+            Self::I16 => write!(f, "I16"),
+            Self::I32 => write!(f, "I32"),
+            Self::I64 => write!(f, "I64"),
+            Self::U8 => write!(f, "U8"),
+            Self::U16 => write!(f, "U16"),
+            Self::U32 => write!(f, "U32"),
+            Self::U64 => write!(f, "U64"),
+            Self::F32 => write!(f, "F32"),
+            Self::F64 => write!(f, "F64"),
+            Self::Char => write!(f, "Char"),
+            Self::Bool => write!(f, "Bool"),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub struct Param {
     pub name: String,
     pub kind: Type,
 }
 
-/*
-* a << b || c && d ^ z
-* a || b || c && d && e || f
-*
-* a >> b || c >> d
-* a >> b >> c
-*/
+////////////////
+// Expresions //
+////////////////
+
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub enum Expr {
     // Ternary Expressions
@@ -292,9 +345,9 @@ pub enum Expr {
         kind: Type,
         expr: Box<Expr>,
     },
-    Ident(String),
+    Ident(QualifiedName),
     StructLiteral {
-        name: String,
+        name: QualifiedName,
         fields: Vec<StructFieldInit>,
     },
     Char(char),
@@ -306,7 +359,7 @@ pub enum Expr {
     Int(u64),
     Float(f64),
     FuncCall {
-        name: String,
+        name: QualifiedName,
         params: Vec<Expr>,
     },
     Call {
@@ -324,6 +377,49 @@ pub enum Expr {
     Deref(Box<Expr>),
 }
 
+impl fmt::Display for Expr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Ternary { a, b, c } => write!(f, "{} ? {} : {}", a, b, c),
+            Self::LogicOr { left, right } => write!(f, "{} || {}", left, right),
+            Self::LogicAnd { left, right } => write!(f, "{} && {}", left, right),
+            Self::BitwiseOr { left, right } => write!(f, "{} | {}", left, right),
+            Self::BitwiseShiftLeft { left, right } => write!(f, "{} << {}", left, right),
+            Self::BitwiseShiftRight { left, right } => write!(f, "{} >> {}", left, right),
+            Self::Cmp { left, right } => write!(f, "{} == {}", left, right),
+            Self::NotCmp { left, right } => write!(f, "{} != {}", left, right),
+            Self::Gt { left, right } => write!(f, "{} > {}", left, right),
+            Self::Lt { left, right } => write!(f, "{} < {}", left, right),
+            Self::LtEq { left, right } => write!(f, "{} <= {}", left, right),
+            Self::GtEq { left, right } => write!(f, "{} >= {}", left, right),
+            Self::Add { left, right } => write!(f, "{} + {}", left, right),
+            Self::Sub { left, right } => write!(f, "{} - {}", left, right),
+            Self::Mul { left, right } => write!(f, "{} * {}", left, right),
+            Self::Div { left, right } => write!(f, "{} / {}", left, right),
+            Self::Mod { left, right } => write!(f, "{} % {}", left, right),
+            Self::Neg { expr } => write!(f, "-{}", expr),
+            Self::Not { expr } => write!(f, "!{}", expr),
+            Self::Tilde { expr } => write!(f, "~{}", expr),
+            Self::Cast { kind, expr } => write!(f, "[{}]{}", kind, expr),
+            Self::Ident(n) => write!(f, "n"),
+            Self::StructLiteral { name, fields } => write!(f, "{} with ... end", name),
+            Self::Char(n) => write!(f, "{n}"),
+            Self::String(n) => write!(f, "{n}"),
+            Self::Nil => write!(f, "Nil"),
+            Self::False => write!(f, "False"),
+            Self::This => write!(f, "This"),
+            Self::True => write!(f, "True"),
+            Self::Int(n) => write!(f, "{n}"),
+            Self::Float(n) => write!(f, "{n}"),
+            Self::FuncCall { name, params } => write!(f, "{}(...)", name),
+            Self::Call { func, args } => write!(f, "{}(...)", func),
+            Self::Member { object, name } => write!(f, "{}::{}", object, name),
+            Self::Index { array, index } => write!(f, "{}[{}]", array, index),
+            Self::Deref(n) => write!(f, "*{}", n),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub struct StructFieldInit {
     pub identifier: String,
@@ -331,11 +427,80 @@ pub struct StructFieldInit {
 }
 
 impl Expr {
-    pub fn to_string(&self) -> Option<String> {
+    pub fn name(&self) -> Option<String> {
         match self {
-            Self::Ident(s) => Some(s.clone()),
+            Self::Ident(s) => Some(match s.0.last() {
+                Some(s) => s.clone(),
+                None => return None,
+            }),
             Self::String(s) => Some(s.clone()),
             _ => None,
         }
+    }
+    pub fn path(&self) -> Option<String> {
+        match self {
+            Self::Ident(s) => {
+                let mut str = String::new();
+                for (i, each) in s.0.iter().enumerate() {
+                    if i < s.0.len().overflowing_sub(2).0 && s.0.len().overflowing_sub(2).1 == false
+                    {
+                        write!(str, "{}::", each);
+                    } else if i == s.0.len().overflowing_sub(2).0
+                        && s.0.len().overflowing_sub(2).1 == false
+                    {
+                        write!(str, "{}", each);
+                    }
+                }
+                if str.len() == 0 { None } else { Some(str) }
+            }
+            _ => None,
+        }
+    }
+    pub fn to_string(&self) -> Option<String> {
+        match self {
+            Self::Ident(s) => {
+                let path = self.path().unwrap_or("".to_string());
+                let name = match self.name() {
+                    Some(s) => s,
+                    None => return None,
+                };
+                if path.len() > 0 {
+                    Some(format!("{}::{}", path, name))
+                } else {
+                    Some(name)
+                }
+            }
+            Self::String(s) => Some(s.clone()),
+            _ => None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct QualifiedName(Vec<String>);
+
+impl fmt::Display for QualifiedName {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0.join("::"))
+    }
+}
+
+impl QualifiedName {
+    pub fn new() -> Self {
+        Self(Vec::new())
+    }
+
+    pub fn from_string(s: impl Into<String>) -> Self {
+        Self(vec![s.into()])
+    }
+
+    pub fn push(&mut self, s: impl Into<String>) {
+        self.0.push(s.into());
+    }
+}
+
+impl Into<QualifiedName> for String {
+    fn into(self) -> QualifiedName {
+        QualifiedName(vec![self])
     }
 }
